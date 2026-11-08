@@ -32,7 +32,7 @@ const DESKTOP_QUERY = '(min-width: 1024px)';
 
 function seatPlace(seat: number, seatCount: number) {
   const angle = Math.PI / 2 + (seat * 2 * Math.PI) / seatCount;
-  return { x: 50 + 38 * Math.cos(angle), y: 50 + 40 * Math.sin(angle) };
+  return { x: 50 + 38 * Math.cos(angle), y: 50 + 36 * Math.sin(angle) };
 }
 
 function defaultRaise(view: HandView, legal: LegalActions): number {
@@ -64,7 +64,7 @@ function DealerBadge({ className }: { className: string }) {
     <div
       role="img"
       aria-label="Dealer button"
-      className={`absolute flex size-7 items-center justify-center rounded-full bg-white font-card text-base font-bold text-[#15171a] ${className}`}
+      className={`absolute flex size-5 items-center justify-center rounded-full bg-white font-card text-xs font-bold text-[#15171a] ${className}`}
     >
       D
     </div>
@@ -148,7 +148,7 @@ function Felt({
         .map((player) => {
           const place = seatPlace(player.seat, seatCount);
           const left = 50 + (place.x - 50) * 0.55;
-          const top = player.seat === HERO_SEAT ? 60 : 50 + (place.y - 50) * 0.55;
+          const top = player.seat === HERO_SEAT ? 58 : 50 + (place.y - 50) * 0.55;
           return (
             <div
               key={player.seat}
@@ -211,9 +211,7 @@ function Felt({
         <span>{hero?.stack ?? 0}</span>
       </div>
 
-      {dealerAtHero && (
-        <DealerBadge className="top-[75%] left-[26%] -translate-x-1/2 -translate-y-1/2" />
-      )}
+      {dealerAtHero && <DealerBadge className="top-[90%] left-[30%]" />}
     </section>
   );
 }
@@ -402,6 +400,14 @@ export function TableScreen({ session }: { session: PlaySession }) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: settingsQuery.queryKey }),
   });
 
+  const logRef = useRef<HTMLDivElement>(null);
+  const eventCount = table.hand?.events.length ?? 0;
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: scrolls whenever a line is added.
+  useEffect(() => {
+    logRef.current?.scrollTo({ top: logRef.current.scrollHeight });
+  }, [eventCount]);
+
   const names = seatNames(session);
   const hand = table.hand;
 
@@ -452,7 +458,7 @@ export function TableScreen({ session }: { session: PlaySession }) {
             className="hidden flex-col gap-2.5 rounded-[14px] border border-line bg-surface p-5 lg:flex"
           >
             <h2 className="m-0 text-xl font-extrabold">This hand</h2>
-            <div className="flex max-h-[320px] flex-col overflow-y-auto">
+            <div ref={logRef} className="flex max-h-[320px] flex-col overflow-y-auto">
               {log.map((line) => (
                 <div
                   key={line.id}

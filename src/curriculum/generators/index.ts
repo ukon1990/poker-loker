@@ -22,6 +22,7 @@ import {
   orderHands,
 } from '@/curriculum/generators/hands';
 import type { GenContext } from '@/curriculum/generators/shared';
+import { playSpot } from '@/curriculum/generators/spots';
 import {
   bankrollRule,
   callOrFold,
@@ -83,6 +84,7 @@ const GENERATORS = {
   'wet-or-dry': wetOrDry,
   'value-or-bluff': valueOrBluff,
   'bankroll-rule': bankrollRule,
+  'play-spot': playSpot,
 } satisfies Record<string, Generator>;
 
 export type GeneratorId = keyof typeof GENERATORS;

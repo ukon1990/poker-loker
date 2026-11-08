@@ -9,15 +9,17 @@ import type {
   NewWordExercise,
   OrderExercise,
   SeatExercise,
+  SpotExercise,
 } from '@/curriculum/exercises';
 import { buildHand } from '@/curriculum/generators/shared';
 import { getTerm } from '@/curriculum/glossary';
 import { type Card, cards as parseCards } from '@/engine/core/cards';
+import { combinations } from '@/engine/core/combinations';
 import { createRng, deriveSeed } from '@/engine/core/rng';
 import { HandCategory, rankFive } from '@/engine/eval/rank';
 import { type SeatMark, SeatRing } from '@/features/lesson/SeatRing';
-import { RichText } from '@/features/terms/RichText';
-import { EmptyCardSlot, PlayingCard } from '@/ui/PlayingCard';
+import { RichText, TermLink } from '@/features/terms/RichText';
+import { type CardSize, EmptyCardSlot, PlayingCard } from '@/ui/PlayingCard';
 
 export interface ExerciseViewProps<E extends Exercise> {
   exercise: E;
@@ -42,13 +44,28 @@ function Prompt({ text }: { text: string }) {
   );
 }
 
-function CardRow({ label, cards }: { label: string; cards: readonly Card[] }) {
+/** Five cards only just fit a phone, so they spread out instead of wrapping. */
+function rowClasses(count: number): string {
+  return count === 5
+    ? 'flex flex-wrap justify-between gap-y-1.5 sm:justify-start sm:gap-x-1.5'
+    : 'flex flex-wrap gap-1.5';
+}
+
+function CardRow({
+  label,
+  cards,
+  size = 'md',
+}: {
+  label: string;
+  cards: readonly Card[];
+  size?: CardSize;
+}) {
   return (
     <section aria-label={label}>
       <div className="mb-2 text-[13px] font-semibold text-ink-2">{label}</div>
-      <div className="flex flex-wrap justify-between gap-y-1.5 sm:justify-start sm:gap-x-1.5">
+      <div className={rowClasses(cards.length)}>
         {cards.map((card) => (
-          <PlayingCard key={card} card={card} size="md" />
+          <PlayingCard key={card} card={card} size={size} />
         ))}
       </div>
     </section>
@@ -68,11 +85,19 @@ function ChoiceView({ exercise, checked, onAnswer }: ExerciseViewProps<ChoiceExe
   return (
     <>
       <Prompt text={exercise.prompt} />
-      {exercise.hole && <CardRow label="Your cards" cards={exercise.hole} />}
-      {exercise.cards && (
-        <CardRow label={hasOpponent ? 'Opponent’s cards' : 'Cards'} cards={exercise.cards} />
+      {exercise.hole && (
+        <CardRow label="Your cards" cards={exercise.hole} size={hasOpponent ? 'sm' : 'md'} />
       )}
-      {exercise.board && <CardRow label="Board" cards={exercise.board} />}
+      {exercise.cards && (
+        <CardRow
+          label={hasOpponent ? 'Opponent’s cards' : 'Cards'}
+          cards={exercise.cards}
+          size={hasOpponent ? 'sm' : 'md'}
+        />
+      )}
+      {exercise.board && (
+        <CardRow label="Board" cards={exercise.board} size={hasOpponent ? 'sm' : 'md'} />
+      )}
       <div className="flex flex-col gap-2">
         {exercise.options.map((option, index) => (
           <button
@@ -156,10 +181,21 @@ function BestFiveView({ exercise, checked, onAnswer }: ExerciseViewProps<BestFiv
     onAnswer(next.length === 5 ? rankFive(next) === exercise.bestRank : null);
   };
 
+  // After checking, show a correct five so a wrong answer can be learned from.
+  const answer = useMemo(() => {
+    const all = [...exercise.hole, ...exercise.board];
+    return combinations(all, 5).find((hand) => rankFive(hand) === exercise.bestRank) ?? [];
+  }, [exercise]);
+
+  const ringFor = (card: Card) => {
+    if (checked) return answer.includes(card) ? ('green' as const) : undefined;
+    return selected.includes(card) ? ('ink' as const) : undefined;
+  };
+
   const row = (label: string, cards: readonly Card[]) => (
     <section aria-label={label}>
       <div className="mb-2 text-[13px] font-semibold text-ink-2">{label}</div>
-      <div className="flex flex-wrap gap-1.5">
+      <div className={rowClasses(cards.length)}>
         {cards.map((card) => (
           <button
             key={card}
@@ -169,7 +205,7 @@ function BestFiveView({ exercise, checked, onAnswer }: ExerciseViewProps<BestFiv
             onClick={() => toggle(card)}
             className={`rounded-lg border-0 bg-transparent p-0 transition-transform ${selected.includes(card) ? '-translate-y-1.5' : ''}`}
           >
-            <PlayingCard card={card} size="md" ring={selected.includes(card) ? 'ink' : undefined} />
+            <PlayingCard card={card} size="md" ring={ringFor(card)} />
           </button>
         ))}
       </div>
@@ -251,6 +287,69 @@ function SeatView({ exercise, checked, onAnswer }: ExerciseViewProps<SeatExercis
           onAnswer(seat === exercise.answerSeat);
         }}
       />
+    </>
+  );
+}
+
+function SpotView({ exercise, checked, onAnswer }: ExerciseViewProps<SpotExercise>) {
+  const [picked, setPicked] = useState<number | null>(null);
+  const slots = Array.from({ length: 5 }, (_, index) => index);
+
+  return (
+    <>
+      <Prompt text={exercise.prompt} />
+
+      <section
+        aria-label="Table"
+        className="flex flex-col gap-2 rounded-3xl bg-felt px-3.5 py-3 text-on-felt"
+      >
+        <div className="text-center text-base font-bold">
+          <TermLink id="pot">Pot</TermLink> {exercise.pot}
+        </div>
+        <div className="flex justify-between sm:justify-center sm:gap-1.5">
+          {slots.map((index) => {
+            const card = exercise.board[index];
+            return card === undefined ? (
+              <EmptyCardSlot key={index} size="sm" />
+            ) : (
+              <PlayingCard key={card} card={card} size="sm" />
+            );
+          })}
+        </div>
+        <div className="flex justify-center gap-1.5">
+          {exercise.hole.map((card, index) => (
+            <PlayingCard key={card} card={card} size="sm" tilt={index === 0 ? -2 : 2} />
+          ))}
+        </div>
+        <div className="text-center text-sm font-bold">You have {exercise.stack} left</div>
+      </section>
+
+      <section aria-label="What happened">
+        <div className="mb-1 text-[13px] font-semibold text-ink-2">What happened</div>
+        {exercise.history.map((line) => (
+          <p key={line} className="m-0 text-[15px] leading-snug">
+            {line}
+          </p>
+        ))}
+      </section>
+
+      <div className="grid grid-cols-2 gap-2">
+        {exercise.options.map((option, index) => (
+          <button
+            key={option}
+            type="button"
+            disabled={checked}
+            aria-pressed={picked === index}
+            onClick={() => {
+              setPicked(index);
+              onAnswer(index === exercise.answer);
+            }}
+            className={`min-h-[52px] rounded-[12px] border-2 px-4 py-2 text-base font-bold ${optionClasses(picked === index, index === exercise.answer, checked)}`}
+          >
+            {option}
+          </button>
+        ))}
+      </div>
     </>
   );
 }
@@ -446,6 +545,7 @@ const VIEWS: ViewRegistry = {
   'best-five': { View: BestFiveView },
   order: { View: OrderView },
   seat: { View: SeatView },
+  spot: { View: SpotView },
 };
 
 export function viewFor(exercise: Exercise): ExerciseViewEntry<Exercise> {

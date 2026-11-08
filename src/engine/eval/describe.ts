@@ -1,3 +1,4 @@
+import { type Card, rankOf, suitOf } from '@/engine/core/cards';
 import { categoryOf, HandCategory, type HandRank } from '@/engine/eval/rank';
 
 const SINGULAR: Record<number, string> = {
@@ -63,6 +64,21 @@ export function rankName(rank: number): string {
 
 export function rankNamePlural(rank: number): string {
   return PLURAL[rank];
+}
+
+const SUIT_NAMES = ['spades', 'hearts', 'diamonds', 'clubs'];
+
+/** A card in words, such as "king of diamonds". */
+export function cardName(card: Card): string {
+  return `${SINGULAR[rankOf(card)]} of ${SUIT_NAMES[suitOf(card)]}`;
+}
+
+/** Two starting cards in words, such as "ace-king suited" or "a pair of sixes". */
+export function startingHandName(hole: readonly Card[]): string {
+  const [high, low] = [...hole].sort((a, b) => rankOf(b) - rankOf(a));
+  if (rankOf(high) === rankOf(low)) return `a pair of ${PLURAL[rankOf(high)]}`;
+  const suited = suitOf(high) === suitOf(low) ? 'suited' : 'offsuit';
+  return `${SINGULAR[rankOf(high)]}-${SINGULAR[rankOf(low)]} ${suited}`;
 }
 
 /** The ranks packed into a hand rank, most significant first. */

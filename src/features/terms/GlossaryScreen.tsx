@@ -51,7 +51,7 @@ export function GlossaryScreen() {
         className="min-h-12 w-full rounded-[10px] border border-line bg-surface px-3.5 text-base text-ink"
       />
 
-      <div className="flex gap-1.5 overflow-x-auto pb-1">
+      <div className="flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none]">
         {filters.map((filter) => (
           <button
             key={filter.id}

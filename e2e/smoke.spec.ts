@@ -1,33 +1,46 @@
 import { expect, type Page, test } from '@playwright/test';
 
 const ROUTES = [
-  { hash: '#/', heading: 'Learn' },
-  { hash: '#/lesson/holdem-1-1', heading: 'Rank' },
-  { hash: '#/practice', heading: 'Practice' },
-  { hash: '#/play', heading: 'Play' },
-  { hash: '#/progress', heading: 'Progress' },
-  { hash: '#/glossary', heading: 'Glossary' },
-  { hash: '#/history', heading: 'History' },
-  { hash: '#/settings', heading: 'Settings' },
+  { path: '/', heading: 'Learn' },
+  { path: '/lesson/holdem-1-1', heading: 'Rank' },
+  { path: '/practice', heading: 'Practice' },
+  { path: '/play', heading: 'Play' },
+  { path: '/progress', heading: 'Progress' },
+  { path: '/glossary', heading: 'Glossary' },
+  { path: '/history', heading: 'History' },
+  { path: '/settings', heading: 'Settings' },
   // Locked lessons and missing tables send you somewhere useful.
-  { hash: '#/lesson/holdem-2-1', heading: 'Learn' },
-  { hash: '#/play/nope', heading: 'Play' },
+  { path: '/lesson/holdem-2-1', heading: 'Learn' },
+  { path: '/play/nope', heading: 'Play' },
 ];
 
-for (const { hash, heading } of ROUTES) {
-  test(`${hash} opens`, async ({ page }) => {
+for (const { path, heading } of ROUTES) {
+  test(`${path} opens directly`, async ({ page }) => {
     const errors: string[] = [];
     page.on('pageerror', (error) => errors.push(error.message));
 
-    await page.goto(`./index.html${hash}`);
+    await page.goto(path);
 
     await expect(page.getByRole('heading', { level: 1, name: heading })).toBeVisible();
     expect(errors).toEqual([]);
   });
 }
 
+test('navigating uses clean paths and the back button works', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto('/');
+  await page.getByRole('link', { name: 'Glossary' }).first().click();
+
+  await expect(page.getByRole('heading', { level: 1, name: 'Glossary' })).toBeVisible();
+  expect(new URL(page.url()).pathname).toBe('/glossary');
+  expect(page.url()).not.toContain('#');
+
+  await page.goBack();
+  await expect(page.getByRole('heading', { level: 1, name: 'Learn' })).toBeVisible();
+});
+
 test('a saved setting survives a reload', async ({ page }) => {
-  await page.goto('./index.html#/settings');
+  await page.goto('/settings');
   const goal = page.getByLabel('Daily goal (XP)');
 
   await goal.fill('55');
@@ -39,19 +52,19 @@ test('a saved setting survives a reload', async ({ page }) => {
 });
 
 test('the manifest is linked and has installable icons', async ({ page, request }) => {
-  await page.goto('./index.html');
+  await page.goto('/');
   const href = await page.locator('link[rel="manifest"]').getAttribute('href');
   expect(href).toBeTruthy();
 
   const manifest = await (await request.get(href as string)).json();
-  expect(manifest.start_url).toBe('./index.html');
+  expect(manifest.start_url).toBe('/');
   for (const icon of manifest.icons) {
     expect((await request.get(icon.src)).ok()).toBe(true);
   }
 });
 
 test('the app loads offline after the first visit', async ({ page, context }) => {
-  await page.goto('./index.html#/practice');
+  await page.goto('/practice');
   await page.evaluate(() => navigator.serviceWorker.ready);
 
   await context.setOffline(true);
@@ -78,7 +91,7 @@ async function finishLesson(page: Page) {
   const complete = page.getByRole('heading', { name: 'Lesson complete' });
   const gotIt = page.getByRole('button', { name: 'Got it' });
   const next = page.getByRole('button', { name: 'Continue' });
-  const check = page.getByRole('button', { name: 'Check' });
+  const check = page.getByRole('button', { name: 'Confirm' });
   const matching = page.getByRole('heading', { name: 'Match each word to its meaning' });
 
   for (let step = 0; step < 400; step++) {
@@ -103,7 +116,7 @@ test('finishing a lesson saves progress and unlocks the next one', async ({ page
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
 
-  await page.goto('./index.html#/lesson/holdem-1-1');
+  await page.goto('/lesson/holdem-1-1');
   await finishLesson(page);
   await expect(page.getByText(/\+\d+ XP/)).toBeVisible();
 
@@ -119,7 +132,7 @@ test('finishing a lesson saves progress and unlocks the next one', async ({ page
 test('a lesson deals new cards each time', async ({ page }) => {
   const firstCards = async () => {
     await page.goto('about:blank');
-    await page.goto('./index.html#/lesson/holdem-1-1');
+    await page.goto('/lesson/holdem-1-1');
     await page.getByRole('button', { name: 'Got it' }).click();
     return page
       .locator('main [role="img"]')
@@ -131,8 +144,20 @@ test('a lesson deals new cards each time', async ({ page }) => {
   expect(deals.size).toBeGreaterThan(1);
 });
 
+test('a spot plays a real hand up to one decision and explains the answer', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/review?skill=playing-spots');
+
+  await expect(page.getByRole('region', { name: 'Table' })).toBeVisible();
+  await expect(page.getByText(/raises to 30 and you call/)).toBeVisible();
+  await page.locator('main .grid button').first().click();
+  await page.getByRole('button', { name: 'Confirm' }).click();
+
+  await expect(page.locator('[aria-live]')).toContainText(/about \d+%/);
+});
+
 test('tapping a word opens its definition', async ({ page }) => {
-  await page.goto('./index.html#/glossary');
+  await page.goto('/glossary');
   await page.getByRole('searchbox', { name: 'Search terms' }).fill('flop');
   await page.getByRole('button', { name: /^Flop/ }).click();
 
@@ -146,7 +171,7 @@ test('a table plays hands against bots and resumes after a reload', async ({ pag
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
 
-  await page.goto('./index.html#/play');
+  await page.goto('/play');
   await page.getByLabel('Players').selectOption('3');
   await page.getByRole('button', { name: 'Sit down' }).click();
   await expect(page.getByText(/Hand 1/)).toBeVisible();
@@ -179,7 +204,7 @@ test('a table plays hands against bots and resumes after a reload', async ({ pag
   await page.reload();
   await expect(page.getByText(/Hand 3/)).toBeVisible();
 
-  await page.goto('./index.html#/history');
+  await page.goto('/history');
   await expect(page.getByRole('heading', { level: 1, name: 'History' })).toBeVisible();
   await expect(page.getByRole('button').filter({ hasText: /^1/ }).first()).toBeVisible();
   expect(errors).toEqual([]);

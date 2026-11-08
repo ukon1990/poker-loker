@@ -290,7 +290,7 @@ export function bestFive(params: { categories: HandCategory[] }, rng: Rng): Draf
     hole,
     board,
     bestRank: rank,
-    explanation: `The best five cards make ${describeHandMarked(rank)}.`,
+    explanation: `The cards with the green outline make ${describeHandMarked(rank)}.`,
   };
 }
 

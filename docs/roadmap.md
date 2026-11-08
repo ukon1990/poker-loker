@@ -19,7 +19,7 @@ The design was approved on 2026-11-08.
 
 - [x] Git repository and tooling (Vite, React, TypeScript, Tailwind, Biome, Vitest, Playwright)
 - [x] `/docs`
-- [x] Router with hash history and placeholder routes
+- [x] Router and placeholder routes
 - [x] PWA manifest, service worker, update prompt, placeholder icons
 - [x] Dexie schema, repositories, backup export/import
 - [x] Engine foundations: cards, seeded RNG, variant model, Hold'em definition, hand evaluator

@@ -4,7 +4,7 @@ import { buildDeck } from '@/engine/core/deck';
 import type { Rng } from '@/engine/core/rng';
 import type { HandView } from '@/engine/core/view';
 import { estimateEquity } from '@/engine/equity/equity';
-import { describeHandMarked } from '@/engine/eval/describe';
+import { describeHandMarked, startingHandName } from '@/engine/eval/describe';
 import { bestRank } from '@/engine/eval/evaluate';
 import { categoryOf, HandCategory } from '@/engine/eval/rank';
 import { getVariant } from '@/engine/variants';
@@ -50,7 +50,7 @@ const NUMBER_WORDS = [
 const SUIT_NAMES = ['spades', 'hearts', 'diamonds', 'clubs'];
 
 /** Describes a flush or straight draw, by trying every card that could come next. */
-function describeDraw(
+export function describeDraw(
   variant: VariantDefinition,
   hole: readonly Card[],
   board: readonly Card[],
@@ -84,12 +84,12 @@ function describeDraw(
   return null;
 }
 
-function describeHolding(
+export function describeHolding(
   variant: VariantDefinition,
   hole: readonly Card[],
   board: readonly Card[],
 ): string {
-  if (board.length < 3) return 'This is your starting hand.';
+  if (board.length < 3) return `You have ${startingHandName(hole)}.`;
   const made = `You have ${describeHandMarked(bestRank(variant, hole, board))}.`;
   const draw = describeDraw(variant, hole, board);
   return draw ? `${made} ${draw}` : made;
@@ -102,7 +102,7 @@ export function coachAdvice(view: HandView, rng: Rng, iterations = COACH_ITERATI
   if (!legal || !me?.hole) throw new Error('The coach can only advise on your turn');
 
   const variant = getVariant(view.variantId);
-  const equity = estimateEquity(
+  const rawEquity = estimateEquity(
     variant,
     me.hole,
     view.board,
@@ -113,6 +113,13 @@ export function coachAdvice(view: HandView, rng: Rng, iterations = COACH_ITERATI
 
   const holding = describeHolding(variant, me.hole, view.board);
   const toCall = legal.call ?? 0;
+
+  // A bettor usually has something, and bigger bets mean stronger hands. Draws are spared,
+  // because they win by improving rather than by being ahead now.
+  const facingBetAfterFlop = toCall > 0 && view.board.length >= 3;
+  const hasDraw = describeDraw(variant, me.hole, view.board) !== null;
+  const betPressure = facingBetAfterFlop && !hasDraw ? 0.12 + 0.3 * (toCall / view.pot) : 0;
+  const equity = rawEquity * (1 - betPressure);
 
   if (toCall === 0) {
     const ahead = equity >= LIKELY_AHEAD && legal.raise !== null;
@@ -137,16 +144,17 @@ export function coachAdvice(view: HandView, rng: Rng, iterations = COACH_ITERATI
   let verdict: string;
   if (margin >= RAISE_MARGIN && legal.raise) {
     recommendation = 'raise';
-    verdict = 'You are well ahead of the price, so {raise|raising} is reasonable.';
+    verdict = 'You are well ahead of the {pot-odds|price}, so {raise|raising} is reasonable.';
   } else if (margin >= CLOSE_MARGIN) {
     recommendation = 'call';
-    verdict = 'That beats the price, so {call|calling} is reasonable.';
+    verdict = 'That beats the {pot-odds|price}, so {call|calling} is reasonable.';
   } else if (margin >= -CLOSE_MARGIN) {
     recommendation = 'call';
-    verdict = 'That is close to the price, so {call|calling} or {fold|folding} are both fine.';
+    verdict =
+      'That is close to the {pot-odds|price}, so {call|calling} or {fold|folding} are both fine.';
   } else {
     recommendation = 'fold';
-    verdict = 'That is less than the price, so {fold|folding} is reasonable.';
+    verdict = 'That is less than the {pot-odds|price}, so {fold|folding} is reasonable.';
   }
 
   return {

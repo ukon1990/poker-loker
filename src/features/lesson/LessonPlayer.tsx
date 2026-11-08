@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Link } from '@tanstack/react-router';
+import { Link, useNavigate } from '@tanstack/react-router';
 import { useCallback, useState } from 'react';
 import type { Exercise } from '@/curriculum/exercises';
 import { db } from '@/db/client';
@@ -17,13 +17,28 @@ import {
 } from '@/learning/lesson-run';
 import { button } from '@/ui/button';
 import { Icon } from '@/ui/Icon';
-import { PlayingCard } from '@/ui/PlayingCard';
+import { PlayingCard, type SuitName } from '@/ui/PlayingCard';
 import { ProgressBar } from '@/ui/ProgressBar';
+import { Sheet } from '@/ui/Sheet';
 
-function Finished({ result, title }: { result: RunResult; title: string }) {
+function Finished({
+  result,
+  title,
+  reward,
+}: {
+  result: RunResult;
+  title: string;
+  reward?: LessonReward;
+}) {
   return (
     <main className="mx-auto flex min-h-dvh max-w-[560px] flex-col items-center justify-center gap-5 px-5 text-center">
-      <PlayingCard rank="A" suit="spade" size="lg" ring="green" tilt={-3} />
+      <PlayingCard
+        rank={reward?.rank ?? 'A'}
+        suit={reward?.suit ?? 'spade'}
+        size="lg"
+        ring="green"
+        tilt={-3}
+      />
       <h1 className="m-0 text-[28px] leading-tight font-extrabold">{title}</h1>
       <div className="font-card text-5xl leading-none font-bold">+{result.xp} XP</div>
       {result.graded > 0 && (
@@ -38,20 +53,30 @@ function Finished({ result, title }: { result: RunResult; title: string }) {
   );
 }
 
+export interface LessonReward {
+  rank: string;
+  suit: SuitName;
+}
+
 export function LessonPlayer({
   exercises,
   lessonId,
   finishedTitle,
+  reward,
 }: {
   exercises: readonly Exercise[];
   lessonId: string | null;
   finishedTitle: string;
+  /** The card earned by finishing. */
+  reward?: LessonReward;
 }) {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [run, setRun] = useState(() => startRun(exercises.length));
   const [answer, setAnswer] = useState<boolean | null>(null);
   const [checked, setChecked] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  const [leaving, setLeaving] = useState(false);
 
   const save = useMutation({
     mutationFn: (finalRun: typeof run) =>
@@ -61,7 +86,7 @@ export function LessonPlayer({
 
   const onAnswer = useCallback((value: boolean | null) => setAnswer(value), []);
 
-  if (save.data) return <Finished result={save.data} title={finishedTitle} />;
+  if (save.data) return <Finished result={save.data} title={finishedTitle} reward={reward} />;
 
   const index = currentExercise(run);
   if (index === null) {
@@ -86,17 +111,37 @@ export function LessonPlayer({
   return (
     <div className="relative mx-auto flex min-h-dvh max-w-[560px] flex-col">
       <div className="flex items-center gap-2 py-3 pr-5 pl-2">
-        <Link
-          to="/"
+        <button
+          type="button"
           aria-label="Close lesson"
-          className="flex size-11 items-center justify-center text-ink-2"
+          onClick={() => setLeaving(true)}
+          className="flex size-11 items-center justify-center bg-transparent text-ink-2"
         >
           <Icon name="close" />
-        </Link>
+        </button>
         <div className="flex-1">
           <ProgressBar value={runProgress(run)} label="Lesson progress" height={8} />
         </div>
       </div>
+
+      <Sheet open={leaving} onClose={() => setLeaving(false)} label="Leave this lesson?">
+        <div className="flex flex-col gap-3.5 p-5 pb-7">
+          <h2 className="m-0 text-xl font-extrabold">Leave this lesson?</h2>
+          <p className="m-0 text-base leading-normal">Your answers so far won’t be saved.</p>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              className={button('outline')}
+              onClick={() => void navigate({ to: '/' })}
+            >
+              Leave
+            </button>
+            <button type="button" className={button()} onClick={() => setLeaving(false)}>
+              Keep going
+            </button>
+          </div>
+        </div>
+      </Sheet>
 
       <main className="flex flex-col gap-5 px-5 pt-2 pb-72">
         <View key={attempt} exercise={exercise} checked={checked} onAnswer={onAnswer} />
@@ -121,7 +166,7 @@ export function LessonPlayer({
                 onClick={() => setChecked(true)}
                 className={button('primary', 'w-full min-h-[52px]')}
               >
-                Check
+                Confirm
               </button>
             )}
           </div>

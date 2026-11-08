@@ -1,5 +1,5 @@
 import type { HandEvent } from '@/engine/core/hand';
-import { describeHand } from '@/engine/eval/describe';
+import { cardName, describeHand } from '@/engine/eval/describe';
 import { holdemNoLimit } from '@/engine/variants/holdem';
 
 export const POSITION_TERMS: Record<string, string> = {
@@ -14,13 +14,19 @@ export const POSITION_TERMS: Record<string, string> = {
   CO: 'cutoff',
 };
 
+const POSITION_ROLES: Record<string, (subject: string, verb: string) => string> = {
+  BTN: (s, v) =>
+    `${s} ${v} on the button, so ${s === 'You' ? 'you act' : 'they act'} last after the flop.`,
+  SB: (s, v) => `${s} ${v} posting the small blind this hand.`,
+  BB: (s, v) => `${s} ${v} posting the big blind this hand.`,
+  UTG: (s, v) => `${s} ${v} first to act before the flop.`,
+  CO: (s, v) => `${s} ${v} one seat before the button.`,
+  HJ: (s, v) => `${s} ${v} two seats before the button.`,
+};
+
 export function positionContext(position: string, name: string): string {
-  if (position === 'BTN' && name === 'You') {
-    return 'You’re on the button, so you act last after the flop.';
-  }
-  return name === 'You'
-    ? 'This is your seat for this hand.'
-    : `${name} is in this seat for this hand.`;
+  const verb = name === 'You' ? 'are' : 'is';
+  return POSITION_ROLES[position]?.(name, verb) ?? `${name} ${verb} in this seat for this hand.`;
 }
 
 const ACTION_VERBS = {
@@ -71,7 +77,10 @@ export function handLog(events: readonly HandEvent[], names: Record<number, stri
         break;
       }
       case 'street':
-        lines.push({ street: streetLabel(event.street), text: 'New card dealt.' });
+        lines.push({
+          street: streetLabel(event.street),
+          text: `${event.cards.map(cardName).join(', ')}.`,
+        });
         break;
       case 'showdown':
         lines.push({
@@ -101,5 +110,7 @@ export function handSummary(events: readonly HandEvent[], names: Record<number, 
   const name = names[seat];
   const shown = events.find((event) => event.type === 'showdown' && event.seat === seat);
   const hand = shown?.type === 'showdown' ? ` with ${describeHand(shown.rank)}` : '';
-  return `${name} ${name === 'You' ? 'win' : 'wins'} ${amount}${hand}.`;
+  const verbWin = name === 'You' ? 'win' : 'wins';
+  // Without a showdown the total would include the winner's own uncalled bet.
+  return shown ? `${name} ${verbWin} ${amount}${hand}.` : `${name} ${verbWin} the pot.`;
 }

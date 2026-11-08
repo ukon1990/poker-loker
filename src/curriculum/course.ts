@@ -59,6 +59,7 @@ const TEXTURE = 'board-texture';
 const VALUE = 'value-and-bluffs';
 const MONEY = 'bankroll';
 const TILT = 'tilt';
+const SPOTS = 'playing-spots';
 
 const LOWER = [C.HighCard, C.Pair, C.TwoPair];
 const MIDDLE = [...LOWER, C.ThreeOfAKind, C.Straight, C.Flush];
@@ -503,6 +504,8 @@ export const HOLDEM_COURSE: Course = {
           step('pot-odds', {}, ODDS),
           step('call-or-fold', {}, ODDS),
           step('call-or-fold', {}, ODDS),
+          step('play-spot', { decision: 'facing-bet', theme: 'draw' }, SPOTS),
+          step('play-spot', { decision: 'facing-bet', theme: 'draw' }, SPOTS),
           match(),
         ],
       ],
@@ -533,6 +536,8 @@ export const HOLDEM_COURSE: Course = {
           step('value-or-bluff', {}, VALUE),
           step('value-or-bluff', {}, VALUE),
           step('value-or-bluff', {}, VALUE),
+          step('play-spot', { decision: 'checked-to', theme: 'made' }, SPOTS),
+          step('play-spot', { decision: 'checked-to', theme: 'made' }, SPOTS),
           match(),
           sentence(),
         ],
@@ -545,6 +550,8 @@ export const HOLDEM_COURSE: Course = {
           step('value-or-bluff', {}, VALUE),
           step('value-or-bluff', {}, VALUE),
           step('value-or-bluff', {}, VALUE),
+          step('play-spot', { decision: 'facing-bet', theme: 'weak' }, SPOTS),
+          step('play-spot', { decision: 'facing-bet', theme: 'weak' }, SPOTS),
           match(),
         ],
       ],
@@ -570,6 +577,9 @@ export const HOLDEM_COURSE: Course = {
           step('open-or-fold', { seats: ['under-the-gun', 'hijack', 'cutoff', 'button'] }, STARTS),
           step('value-or-bluff', {}, VALUE),
           step('call-or-fold', {}, ODDS),
+          step('play-spot', {}, SPOTS),
+          step('play-spot', {}, SPOTS),
+          step('play-spot', {}, SPOTS),
         ],
       ],
     ]),
@@ -692,6 +702,7 @@ export const SKILL_DRILLS: Record<string, StepSpec> = {
   [VALUE]: step('value-or-bluff', {}, VALUE),
   [MONEY]: step('bankroll-rule', {}, MONEY),
   [TILT]: step('concept', { id: 'tilt-sign' }, TILT),
+  [SPOTS]: step('play-spot', {}, SPOTS),
 };
 
 export const SKILL_NAMES: Record<string, string> = {
@@ -716,6 +727,7 @@ export const SKILL_NAMES: Record<string, string> = {
   [VALUE]: 'Value bets and bluffs',
   [MONEY]: 'Bankroll',
   [TILT]: 'Tilt',
+  [SPOTS]: 'Playing a spot',
 };
 
 /** A review session for these skills, with new cards each time. */

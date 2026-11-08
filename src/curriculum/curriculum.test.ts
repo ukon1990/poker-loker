@@ -354,6 +354,49 @@ describe('answers are correct', () => {
     }
   });
 
+  it('grades spots by comparing the chance of winning with the price', () => {
+    type Spot = Extract<Exercise, { kind: 'spot' }>;
+    const variations = [
+      {},
+      { decision: 'facing-bet', theme: 'draw' },
+      { decision: 'checked-to', theme: 'made' },
+      { decision: 'facing-bet', theme: 'weak' },
+    ];
+
+    for (const params of variations) {
+      for (let seed = 0; seed < 60; seed++) {
+        const exercise = run<Spot>('play-spot', params, seed);
+        const cards = [...exercise.hole, ...exercise.board];
+        expect(new Set(cards).size).toBe(cards.length);
+        expect([3, 4, 5]).toContain(exercise.board.length);
+
+        if (exercise.needed !== null) {
+          const call = Number(exercise.options[1].replace('Call ', ''));
+          expect(exercise.needed).toBeCloseTo(call / (exercise.pot + call), 5);
+          expect(exercise.answer).toBe(exercise.equity >= exercise.needed ? 1 : 0);
+          expect(Math.abs(exercise.equity - exercise.needed)).toBeGreaterThanOrEqual(0.1);
+          expect(exercise.history.at(-1)).toContain(`bets ${call}`);
+        } else {
+          expect(exercise.options).toEqual(['Check', 'Bet']);
+          expect(exercise.answer).toBe(exercise.equity >= 0.5 ? 1 : 0);
+          expect(exercise.equity >= 0.62 || exercise.equity <= 0.38).toBe(true);
+        }
+      }
+    }
+  });
+
+  it('builds spots that match their theme', () => {
+    type Spot = Extract<Exercise, { kind: 'spot' }>;
+    for (let seed = 0; seed < 60; seed++) {
+      const weak = run<Spot>('play-spot', { decision: 'facing-bet', theme: 'weak' }, seed);
+      expect(categoryOf(bestOfSeven(weak.hole, weak.board))).toBe(HandCategory.HighCard);
+      expect(weak.options[weak.answer]).toBe('Fold');
+
+      const draw = run<Spot>('play-spot', { decision: 'facing-bet', theme: 'draw' }, seed);
+      expect(draw.explanation).toContain('complete your');
+    }
+  });
+
   it('applies the bankroll rule', () => {
     for (let seed = 0; seed < SEEDS; seed++) {
       const exercise = run<ChoiceExercise>('bankroll-rule', {}, seed);

@@ -4,20 +4,13 @@ import { preflopPercentile } from '@/engine/bots/preflop';
 import { type Card, rankOf, suitOf } from '@/engine/core/cards';
 import { buildDeck, STANDARD_52, shuffle } from '@/engine/core/deck';
 import type { Rng } from '@/engine/core/rng';
-import { describeHandMarked, rankName } from '@/engine/eval/describe';
+import { describeHandMarked, startingHandName } from '@/engine/eval/describe';
 import { bestRank } from '@/engine/eval/evaluate';
 import { categoryOf, HandCategory, rankFive } from '@/engine/eval/rank';
 import { holdemNoLimit } from '@/engine/variants/holdem';
 
 const FULL_DECK = buildDeck(STANDARD_52);
 const MAX_TRIES = 8000;
-
-function startingHandName(hole: readonly Card[]): string {
-  const [high, low] = [...hole].sort((a, b) => rankOf(b) - rankOf(a));
-  if (rankOf(high) === rankOf(low)) return `a pair of ${rankName(rankOf(high))}s`;
-  const suited = suitOf(high) === suitOf(low) ? 'suited' : 'offsuit';
-  return `${rankName(rankOf(high))}-${rankName(rankOf(low))} ${suited}`;
-}
 
 function topPercent(percentile: number): number {
   return Math.max(1, Math.round(percentile * 100));
@@ -129,8 +122,7 @@ export function countOuts(params: { flushDrawsOnly?: boolean }, rng: Rng): Draft
     );
     return {
       kind: 'choice',
-      prompt:
-        'The middle row is your opponent’s cards. How many {outs} put you ahead on the next card?',
+      prompt: 'How many {outs} put you ahead on the next card?',
       hole,
       cards,
       board,

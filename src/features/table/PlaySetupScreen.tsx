@@ -1,9 +1,10 @@
 import { useForm } from '@tanstack/react-form';
-import { useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { db } from '@/db/client';
 import { activeSessionsQuery, dashboardQuery } from '@/db/queries';
 import { savePlaySession } from '@/db/repositories';
+import type { PlaySession } from '@/db/schema';
 import {
   closestDifficulty,
   DIFFICULTY_LEVELS,
@@ -23,6 +24,11 @@ export function PlaySetupScreen() {
   const { data: dashboard } = useSuspenseQuery(dashboardQuery);
   const { data: sessions } = useSuspenseQuery(activeSessionsQuery);
   const autoLevel = closestDifficulty(targetSkill('auto', dashboard.playerSkill));
+
+  const close = useMutation({
+    mutationFn: (session: PlaySession) => savePlaySession(db, { ...session, status: 'finished' }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: activeSessionsQuery.queryKey }),
+  });
 
   const form = useForm({
     defaultValues: { seatCount: 6, difficulty: 'auto' as DifficultyId },
@@ -75,7 +81,7 @@ export function PlaySetupScreen() {
                 value={field.state.value}
                 onChange={(event) => field.handleChange(event.target.value as DifficultyId)}
               >
-                <option value="auto">Auto, matches your level ({autoLevel.label})</option>
+                <option value="auto">Auto ({autoLevel.label})</option>
                 {DIFFICULTY_LEVELS.map((level) => (
                   <option key={level.id} value={level.id}>
                     {level.label}
@@ -87,8 +93,8 @@ export function PlaySetupScreen() {
         </form.Field>
 
         <p className="m-0 text-sm text-ink-2">
-          Blinds 5/10, 1,000 chips each. Every bot’s skill is set before the first hand. Difficulty
-          never changes the cards you’re dealt.
+          Blinds 5/10, 1,000 chips each. Auto matches the bots to your level. Every bot’s skill is
+          set before the first hand. Difficulty never changes the cards you’re dealt.
         </p>
 
         <button type="submit" className={button()}>
@@ -100,17 +106,27 @@ export function PlaySetupScreen() {
         <section className="flex flex-col gap-2">
           <h2 className="m-0 text-xl font-bold">Your tables</h2>
           {sessions.map((session) => (
-            <Link
-              key={session.id}
-              to="/play/$sessionId"
-              params={{ sessionId: session.id }}
-              className="flex min-h-[60px] items-center justify-between rounded-[12px] border border-line bg-surface px-4 text-ink no-underline"
-            >
-              <span className="text-base font-bold">{session.config.seatCount} players</span>
-              <span className="text-sm text-ink-2">
-                {session.handsPlayed} hands · {closestDifficulty(session.config.targetSkill).label}
-              </span>
-            </Link>
+            <div key={session.id} className="flex items-stretch gap-2">
+              <Link
+                to="/play/$sessionId"
+                params={{ sessionId: session.id }}
+                className="flex min-h-[60px] min-w-0 flex-1 items-center justify-between rounded-[12px] border border-line bg-surface px-4 text-ink no-underline"
+              >
+                <span className="text-base font-bold">{session.config.seatCount} players</span>
+                <span className="text-sm text-ink-2">
+                  {session.handsPlayed} {session.handsPlayed === 1 ? 'hand' : 'hands'} ·{' '}
+                  {closestDifficulty(session.config.targetSkill).label}
+                </span>
+              </Link>
+              <button
+                type="button"
+                aria-label={`Close the ${session.config.seatCount} player table`}
+                className={button('outline', 'min-h-[60px]')}
+                onClick={() => close.mutate(session)}
+              >
+                Close
+              </button>
+            </div>
           ))}
         </section>
       )}

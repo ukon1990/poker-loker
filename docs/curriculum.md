@@ -75,7 +75,7 @@ Each type is an entry in a renderer registry, so adding one does not touch the l
 - Count the outs
 - Calculate pot odds
 - Fold, call, or raise at a given position
-- Scripted "play this spot" hands
+- Play this spot: the engine plays a real hand up to one decision, and the coach's calculation decides the answer
 
 ## Generated exercises
 

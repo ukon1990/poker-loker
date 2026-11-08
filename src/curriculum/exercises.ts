@@ -70,6 +70,23 @@ export interface SeatExercise extends ExerciseBase {
   explanation: string;
 }
 
+export interface SpotExercise extends ExerciseBase {
+  kind: 'spot';
+  prompt: string;
+  hole: Card[];
+  board: Card[];
+  pot: number;
+  stack: number;
+  /** What happened before this decision, in plain words. */
+  history: string[];
+  options: string[];
+  answer: number;
+  /** The share of the pot a call must win. Null when there is nothing to call. */
+  needed: number | null;
+  equity: number;
+  explanation: string;
+}
+
 export type Exercise =
   | NewWordExercise
   | MatchExercise
@@ -77,6 +94,7 @@ export type Exercise =
   | CompareExercise
   | BestFiveExercise
   | OrderExercise
-  | SeatExercise;
+  | SeatExercise
+  | SpotExercise;
 
 export type ExerciseKind = Exercise['kind'];

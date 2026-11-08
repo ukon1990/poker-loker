@@ -75,10 +75,12 @@ export function TermSheet() {
             <div className="text-[13px] font-semibold text-ink-2">Added to your review</div>
           )}
 
-          <div className="grid grid-cols-2 gap-2">
-            <Link to="/glossary" className={button('outline')} onClick={closeTerm}>
-              Glossary
-            </Link>
+          <div className={`grid gap-2 ${fromTable ? 'grid-cols-2' : ''}`}>
+            {fromTable && (
+              <Link to="/glossary" className={button('outline')} onClick={closeTerm}>
+                Glossary
+              </Link>
+            )}
             <button type="button" className={button()} onClick={closeTerm}>
               {fromTable ? 'Back to the hand' : 'Got it'}
             </button>

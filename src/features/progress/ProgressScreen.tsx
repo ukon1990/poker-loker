@@ -55,7 +55,7 @@ export function ProgressScreen() {
       <section className="rounded-[14px] border border-line bg-surface px-4 py-3.5">
         <div className="mb-2.5 flex items-baseline justify-between">
           <h2 className="m-0 text-base font-extrabold">This week</h2>
-          <span className="text-[13px] text-ink-2">XP per day</span>
+          <span className="text-[13px] text-ink-2">XP per day · Dashed line: goal {goal}</span>
         </div>
         <div
           className="relative grid grid-cols-7 items-end border-b border-line"
@@ -65,12 +65,6 @@ export function ProgressScreen() {
             className="absolute inset-x-0 border-t border-dashed border-ink-2"
             style={{ bottom: goalHeight }}
           />
-          <div
-            className="absolute right-0 bg-surface pl-1 text-[13px] text-ink-2"
-            style={{ bottom: goalHeight + 3 }}
-          >
-            Goal {goal}
-          </div>
           {data.week.map((day) => (
             <div
               key={day.day}

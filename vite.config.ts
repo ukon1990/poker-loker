@@ -5,9 +5,12 @@ import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import { defineConfig } from 'vitest/config';
 
+// Absolute, because a deep link like /lesson/x must still find /assets. For a sub-path, set
+// VITE_BASE, for example VITE_BASE=/poker/. It needs both slashes.
+const base = process.env.VITE_BASE ?? '/';
+
 export default defineConfig({
-  // Relative so the build works at a bucket root, a sub-path, or behind a CDN.
-  base: './',
+  base,
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },
@@ -26,13 +29,12 @@ export default defineConfig({
       injectRegister: false,
       includeAssets: ['icon.svg'],
       manifest: {
-        id: './index.html',
+        id: base,
         name: 'Poker Loker',
         short_name: 'Poker Loker',
         description: 'Learn poker in short lessons and practise against bots.',
-        // Explicit index.html: a bare S3 HTTPS endpoint does not resolve "/" to it.
-        start_url: './index.html',
-        scope: './',
+        start_url: base,
+        scope: base,
         display: 'standalone',
         background_color: '#fafaf7',
         theme_color: '#fafaf7',
@@ -44,7 +46,8 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2,webmanifest}'],
-        navigateFallback: 'index.html',
+        // Offline, any route is served by the app shell.
+        navigateFallback: `${base}index.html`,
         cleanupOutdatedCaches: true,
       },
     }),

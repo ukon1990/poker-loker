@@ -16,12 +16,13 @@ This folder is the living plan for the app. It is updated in every phase of the 
 
 ## Commands
 
-| Command                         | Purpose                                                             |
-| ------------------------------- | ------------------------------------------------------------------- |
-| `pnpm dev`                      | Dev server (the service worker only exists in the production build) |
-| `pnpm typecheck`                | TypeScript                                                          |
-| `pnpm lint`                     | Biome lint and format check                                         |
-| `pnpm test`                     | Unit tests                                                          |
-| `pnpm test:e2e`                 | Playwright against the production build                             |
-| `pnpm build`                    | Production build into `dist/`                                       |
-| `S3_BUCKET=name pnpm deploy:s3` | Upload the build to S3                                              |
+| Command                                            | Purpose                                                             |
+| -------------------------------------------------- | ------------------------------------------------------------------- |
+| `pnpm dev`                                         | Dev server (the service worker only exists in the production build) |
+| `pnpm typecheck`                                   | TypeScript                                                          |
+| `pnpm lint`                                        | Biome lint and format check                                         |
+| `pnpm test`                                        | Unit tests                                                          |
+| `pnpm test:e2e`                                    | Playwright against the production build                             |
+| `pnpm build`                                       | Production build into `dist/`                                       |
+| `DEPLOY_TARGET=user@host:/path pnpm deploy:server` | Upload the build to an Apache or nginx server                       |
+| `S3_BUCKET=name pnpm deploy:s3`                    | Upload the build to S3                                              |

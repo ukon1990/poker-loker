@@ -5,7 +5,7 @@
 | Concern                   | Choice                                     |
 | ------------------------- | ------------------------------------------ |
 | Build                     | Vite 8, React 19, TypeScript, pnpm         |
-| Routing                   | TanStack Router, file-based, hash history  |
+| Routing                   | TanStack Router, file-based, clean paths   |
 | Async data over Dexie     | TanStack Query                             |
 | Live table and hand state | TanStack Store                             |
 | Forms                     | TanStack Form                              |
@@ -53,16 +53,16 @@ The live hand being played is held in TanStack Store for fast updates, and is sa
 
 ## Routes
 
-| Path                 | Purpose                      |
-| -------------------- | ---------------------------- |
-| `#/`                 | Skill path                   |
-| `#/lesson/$lessonId` | Lesson player                |
-| `#/practice`         | Review of weak skills        |
-| `#/play`             | Table setup and session list |
-| `#/play/$sessionId`  | Simulation table             |
-| `#/progress`         | Stats and streak             |
-| `#/glossary`         | Searchable poker terminology |
-| `#/history`          | Hand history                 |
-| `#/settings`         | Settings, backup             |
+| Path                | Purpose                      |
+| ------------------- | ---------------------------- |
+| `/`                 | Skill path                   |
+| `/lesson/$lessonId` | Lesson player                |
+| `/practice`         | Review of weak skills        |
+| `/play`             | Table setup and session list |
+| `/play/$sessionId`  | Simulation table             |
+| `/progress`         | Stats and streak             |
+| `/glossary`         | Searchable poker terminology |
+| `/history`          | Hand history                 |
+| `/settings`         | Settings, backup             |
 
-Hash routing means a static host needs no rewrite rules. See [deployment.md](deployment.md).
+Routes are normal paths, so the host must serve `index.html` for any path it has no file for. See [deployment.md](deployment.md).
