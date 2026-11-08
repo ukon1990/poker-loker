@@ -1,1 +1,134 @@
 @import "tailwindcss";
+
+@theme {
+  --color-*: initial;
+  --color-white: #ffffff;
+  --font-ui: "Figtree Variable", system-ui, sans-serif;
+  --font-card: "Zilla Slab", Georgia, serif;
+}
+
+@theme inline {
+  --color-ground: var(--ground);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-on-ink: var(--on-ink);
+  --color-line: var(--line);
+  --color-red: var(--red);
+  --color-on-red: var(--on-red);
+  --color-red-tint: var(--red-tint);
+  --color-red-ink: var(--red-ink);
+  --color-green: var(--green);
+  --color-felt: var(--felt);
+  --color-on-felt: var(--on-felt);
+  --color-on-felt-2: var(--on-felt-2);
+  --color-felt-tint: var(--felt-tint);
+  --color-felt-ink: var(--felt-ink);
+}
+
+:root {
+  --felt: #0e5b49;
+  --on-felt: #ffffff;
+  --on-felt-2: #cfe3dc;
+
+  --ground: #fafaf7;
+  --surface: #ffffff;
+  --ink: #15171a;
+  --ink-2: #585d66;
+  --on-ink: #ffffff;
+  --line: #e5e4df;
+  --red: #c4122f;
+  --on-red: #ffffff;
+  --red-tint: #fcebed;
+  --red-ink: #8e0e23;
+  --green: #0e5b49;
+  --felt-tint: #e4f1ed;
+  --felt-ink: #0b4c3d;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground: #121417;
+    --surface: #1c1f24;
+    --ink: #f2f1ec;
+    --ink-2: #a6abb3;
+    --on-ink: #15171a;
+    --line: #2e3238;
+    --red: #ff5a6e;
+    --on-red: #15171a;
+    --red-tint: #3a1b21;
+    --red-ink: #ffb3bd;
+    --green: #5fd3b3;
+    --felt-tint: #15332c;
+    --felt-ink: #a8e9d6;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --ground: #121417;
+  --surface: #1c1f24;
+  --ink: #f2f1ec;
+  --ink-2: #a6abb3;
+  --on-ink: #15171a;
+  --line: #2e3238;
+  --red: #ff5a6e;
+  --on-red: #15171a;
+  --red-tint: #3a1b21;
+  --red-ink: #ffb3bd;
+  --green: #5fd3b3;
+  --felt-tint: #15332c;
+  --felt-ink: #a8e9d6;
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+:focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: 2px;
+}
+
+.term-link {
+  color: inherit;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+
+dialog.sheet {
+  margin: auto 0 0;
+  width: 100%;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 20px 20px 0 0;
+  background: var(--surface);
+  color: var(--ink);
+}
+
+dialog.sheet::backdrop {
+  background: rgb(21 23 26 / 0.5);
+}
+
+@media (min-width: 640px) {
+  dialog.sheet {
+    margin: auto;
+    max-width: 480px;
+    border-radius: 20px;
+  }
+}
