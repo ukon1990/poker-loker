@@ -4,6 +4,7 @@ import {
   type Card,
   makeCard,
   type Rank,
+  rankOf,
   type Suit,
 } from '@/engine/core/cards';
 import { shuffle } from '@/engine/core/deck';
@@ -80,6 +81,17 @@ function draft(category: HandCategory, rng: Rng): Card[] {
     case HandCategory.StraightFlush:
       return suited(straightRanks(rng), pick(ALL_SUITS, rng));
   }
+}
+
+/** Matching cards together and the rest in order, so the pattern is easy to see. */
+export function tidyHand(hand: readonly Card[]): Card[] {
+  const counts = new Map<Rank, number>();
+  for (const card of hand) counts.set(rankOf(card), (counts.get(rankOf(card)) ?? 0) + 1);
+  const count = (card: Card) => counts.get(rankOf(card)) ?? 0;
+  // In ace to five the ace plays low, so it belongs at the start of the run.
+  const wheel = [14, 2, 3, 4, 5].every((rank) => counts.has(rank));
+  const order = (card: Card) => (wheel && rankOf(card) === 14 ? 1 : rankOf(card));
+  return [...hand].sort((a, b) => count(b) - count(a) || order(a) - order(b));
 }
 
 const MAX_BUILD_TRIES = 5000;

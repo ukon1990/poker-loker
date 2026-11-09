@@ -26,8 +26,8 @@ export const GLOSSARY: readonly GlossaryTerm[] = [
     id: 'rank',
     term: 'Rank',
     category: 'hands',
-    short: 'A card’s value, from two up to ace.',
-    long: 'The value of a card. From lowest to highest: 2, 3, 4, 5, 6, 7, 8, 9, 10, jack, queen, king, ace.',
+    short: 'A card’s number or face, from two up to ace.',
+    long: 'The number or face on a card. From lowest to highest: 2, 3, 4, 5, 6, 7, 8, 9, 10, jack, queen, king, ace.',
     example: 'A king has a higher rank than a queen.',
   },
   {
@@ -43,7 +43,7 @@ export const GLOSSARY: readonly GlossaryTerm[] = [
     term: 'High card',
     category: 'hands',
     short: 'No combination, so the highest card counts.',
-    long: 'The weakest hand. With no combination at all, your highest card decides how strong the hand is.',
+    long: 'With no combination at all, your highest card decides how strong the hand is.',
     example: 'I only had ace high.',
   },
   {
@@ -83,7 +83,7 @@ export const GLOSSARY: readonly GlossaryTerm[] = [
     term: 'Flush',
     category: 'hands',
     short: 'Five cards of the same suit.',
-    long: 'Five cards of one suit, in any order. Between two flushes, the highest card wins.',
+    long: 'Five cards of one {suit}, whatever their ranks. Between two flushes, the highest card wins.',
     example: 'She made a flush on the river.',
   },
   {
@@ -99,7 +99,7 @@ export const GLOSSARY: readonly GlossaryTerm[] = [
     term: 'Four of a kind',
     category: 'hands',
     short: 'All four cards of one rank.',
-    long: 'All four cards of the same rank.',
+    long: 'All four cards of the same {rank}. A deck has only four of each, so five of a kind does not exist in Hold’em.',
     example: 'Four of a kind almost always wins.',
   },
   {
@@ -107,14 +107,14 @@ export const GLOSSARY: readonly GlossaryTerm[] = [
     term: 'Straight flush',
     category: 'hands',
     short: 'Five in a row, all the same suit.',
-    long: 'Five consecutive cards of one suit. Only a higher straight flush beats it.',
+    long: 'Five consecutive cards of one suit. Between two straight flushes, the one reaching the higher card wins.',
   },
   {
     id: 'royal-flush',
     term: 'Royal flush',
     category: 'hands',
-    short: 'Ten to ace, all the same suit.',
-    long: 'The best possible hand: ten, jack, queen, king, and ace of the same suit.',
+    short: 'The highest straight flush: ten to ace, one suit.',
+    long: 'The highest possible {straight-flush|straight flush}: ten, jack, queen, king, and ace of the same suit. It is not a separate kind of hand, just the top one.',
     example: 'Most players never see a royal flush.',
   },
   {

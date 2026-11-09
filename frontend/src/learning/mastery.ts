@@ -6,7 +6,11 @@ import { addDays, type LocalDay } from '@/learning/days';
 const BOX_INTERVALS = [1, 2, 4, 8, 16];
 export const MAX_BOX = BOX_INTERVALS.length;
 
-/** Leitner boxes: a right answer moves up and waits longer, a wrong one moves down. */
+/**
+ * Leitner boxes: a right answer on a due skill moves up and waits longer, a wrong one moves down.
+ * Right answers before the due day are extra practice. They say nothing yet about whether the
+ * skill has stuck, so several in one sitting must not count as several spaced reviews.
+ */
 export function updateMastery(
   previous: SkillMastery | undefined,
   variantId: VariantId,
@@ -14,6 +18,10 @@ export function updateMastery(
   correct: boolean,
   today: LocalDay,
 ): SkillMastery {
+  if (previous && correct && previous.dueDay > today) {
+    return { ...previous, correct: previous.correct + 1 };
+  }
+
   const box = previous ? previous.box + (correct ? 1 : -1) : correct ? 2 : 1;
   const nextBox = Math.min(MAX_BOX, Math.max(1, box));
 

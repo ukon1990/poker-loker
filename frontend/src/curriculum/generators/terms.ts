@@ -1,6 +1,7 @@
 import type { Draft } from '@/curriculum/generators/hands';
 import { type GenContext, optionSet, pick } from '@/curriculum/generators/shared';
 import { GLOSSARY, type GlossaryTerm, getTerm } from '@/curriculum/glossary';
+import { oneIn, type Rung, rungForTerm } from '@/curriculum/ladder';
 import { shuffle } from '@/engine/core/deck';
 import type { Rng } from '@/engine/core/rng';
 import { holdemNoLimit } from '@/engine/variants/holdem';
@@ -75,8 +76,36 @@ export function termFromMeaning(params: { termId?: string }, rng: Rng, context: 
   };
 }
 
+/** Words where another word from the same group could fit the same sentence just as well. */
+const NO_BLANK = new Set([
+  ...GLOSSARY.filter((term) => term.category === 'position').map((term) => term.id),
+  'flop',
+  'turn',
+  'river',
+  'street',
+  'small-blind',
+  'big-blind',
+  'bet',
+  'three-bet',
+  'pot',
+  'split-pot',
+  'chop',
+  'three-of-a-kind',
+  'straight',
+  'flush',
+  'full-house',
+  'four-of-a-kind',
+  'straight-flush',
+  'royal-flush',
+  'pair',
+  'two-pair',
+  'trips',
+  'set',
+  'quads',
+]);
+
 function blankSentence(term: GlossaryTerm): string | null {
-  if (!term.example) return null;
+  if (!term.example || NO_BLANK.has(term.id)) return null;
   const pattern = new RegExp(`\\b${term.term}\\b`, 'i');
   return pattern.test(term.example) ? term.example.replace(pattern, '____') : null;
 }
@@ -143,7 +172,94 @@ export function streetFact(_params: object, rng: Rng): Draft {
   };
 }
 
+const flushRung = rungForTerm('flush') as Rung;
+const straightRung = rungForTerm('straight') as Rung;
+
 const CONCEPTS = {
+  'five-of-a-kind': {
+    prompt: 'Can you make five of a kind in Hold’em?',
+    correct: 'No, there are only four of each rank',
+    wrong: [
+      'Yes, and it beats a royal flush',
+      'Yes, but only with aces',
+      'Yes, if the fifth card is on the river',
+    ],
+    explanation:
+      'Each {rank} appears once per {suit}, so four is the limit. Five of the same suit is a {flush}, which is a different hand.',
+    notes: {
+      'Yes, and it beats a royal flush':
+        'Some home games with wild cards have it, but Hold’em has no wild cards.',
+      'Yes, but only with aces': 'There are only four aces, the same as every other rank.',
+      'Yes, if the fifth card is on the river':
+        'The river adds a card, but there is no fifth card of that rank in the deck.',
+    },
+  },
+  'royal-is-straight-flush': {
+    prompt: 'What is a {royal-flush|royal flush}?',
+    correct: 'The highest possible straight flush',
+    wrong: [
+      'Any flush with an ace in it',
+      'Any straight that ends in an ace',
+      'A flush made of only face cards',
+    ],
+    explanation:
+      'Ten to ace in one {suit} is simply the top {straight-flush|straight flush}, which is why nothing beats it.',
+    notes: {
+      'Any flush with an ace in it':
+        'That is an ace-high flush. A royal flush also needs ten to ace in a row.',
+      'Any straight that ends in an ace':
+        'A straight to the ace can have mixed suits. A royal flush needs one suit.',
+      'A flush made of only face cards':
+        'A suit has only three face cards, so that could not make five.',
+    },
+  },
+  'why-flush-beats-straight': {
+    prompt: 'Why does a {flush} beat a {straight}?',
+    correct: 'A flush is rarer',
+    wrong: [
+      'Suits are worth more than ranks',
+      'A flush always has higher cards',
+      'A flush uses more cards',
+    ],
+    explanation: `In five random cards, a {flush} comes up about ${oneIn(flushRung)} times and a {straight} about ${oneIn(straightRung)}. Every step up the ladder is a rarer hand.`,
+    notes: {
+      'Suits are worth more than ranks':
+        'No suit is worth more than another. The order comes from how rare each hand is.',
+      'A flush always has higher cards':
+        'A seven-high flush still beats an ace-high straight, so the height of the cards is not why.',
+      'A flush uses more cards': 'Both hands use all five cards.',
+    },
+  },
+  'ace-low': {
+    prompt: 'Is ace, two, three, four, five a {straight}?',
+    correct: 'Yes, the ace plays low',
+    wrong: [
+      'No, an ace is always high',
+      'Only if all five share a suit',
+      'Only with a king as well',
+    ],
+    explanation: 'That straight is called a {wheel}. It is the lowest straight there is.',
+    notes: {
+      'No, an ace is always high':
+        'An ace can be high or low in a straight, but it cannot be both at once.',
+      'Only if all five share a suit':
+        'A straight can have any mix of suits. All one suit would make it a straight flush.',
+      'Only with a king as well':
+        'A straight cannot wrap around the ace, so king and two never mix.',
+    },
+  },
+  'matching-climb': {
+    prompt: 'Going up the matching hands, what comes right after two pair (2 + 2)?',
+    correct: 'Three of a kind (3)',
+    wrong: ['Full house (3 + 2)', 'Four of a kind (4)', 'A pair (2)'],
+    explanation: 'Matching ranks climb like this: 2, then 2 + 2, then 3, then 3 + 2, then 4.',
+    notes: {
+      'Full house (3 + 2)':
+        'Among the matching hands, three of a kind comes first and then the full house.',
+      'Four of a kind (4)': 'Four of a kind is the top of the matching hands.',
+      'A pair (2)': 'A pair is the step below two pair.',
+    },
+  },
   'why-position': {
     prompt: 'Why is acting last an advantage?',
     correct: 'You see what others do before you decide',
@@ -229,10 +345,14 @@ export type ConceptId = keyof typeof CONCEPTS;
 /** A true concept question. The facts are authored, and the option order is shuffled. */
 export function concept(params: { id: ConceptId }, rng: Rng): Draft {
   const entry = CONCEPTS[params.id];
+  const { options, answer } = optionSet(entry.correct, entry.wrong, rng);
+  const notes = ('notes' in entry ? entry.notes : undefined) as Record<string, string> | undefined;
   return {
     kind: 'choice',
     prompt: entry.prompt,
-    ...optionSet(entry.correct, entry.wrong, rng),
+    options,
+    answer,
     explanation: entry.explanation,
+    notes: notes && options.map((option) => notes[option]),
   };
 }

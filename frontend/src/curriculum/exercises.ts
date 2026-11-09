@@ -11,6 +11,25 @@ export interface NewWordExercise extends ExerciseBase {
   termId: string;
 }
 
+export interface LadderExercise extends ExerciseBase {
+  kind: 'ladder';
+  prompt: string;
+  intro: string;
+  /** Glossary ids of the hands this lesson is about. */
+  highlight: string[];
+}
+
+/** A comparison solved in front of the learner, step by step. */
+export interface WorkedExercise extends ExerciseBase {
+  kind: 'worked';
+  prompt: string;
+  board?: Card[];
+  hands: { label: string; cards: Card[]; result: string }[];
+  /** Cards to outline, when the example is about choosing cards. */
+  best?: Card[];
+  steps: string[];
+}
+
 export interface MatchExercise extends ExerciseBase {
   kind: 'match';
   terms: { termId: string; term: string; meaning: string }[];
@@ -28,6 +47,8 @@ export interface ChoiceExercise extends ExerciseBase {
   options: string[];
   answer: number;
   explanation: string;
+  /** What is wrong with each option, for a learner who picks it. Parallel to `options`. */
+  notes?: (string | undefined)[];
 }
 
 export interface CompareExercise extends ExerciseBase {
@@ -37,9 +58,13 @@ export interface CompareExercise extends ExerciseBase {
   hands: { label: string; cards: Card[]; result: string }[];
   /** Offer a "split the pot" answer. */
   offerSplit: boolean;
+  /** Show each hand's name before answering, so only the comparison is left to do. */
+  showNames?: boolean;
   /** Index into `hands`, or `hands.length` when the pot is split. */
   answer: number;
   explanation: string;
+  /** What to do differently after picking each answer. Indexed like `answer`. */
+  notes?: (string | undefined)[];
 }
 
 export interface BestFiveExercise extends ExerciseBase {
@@ -55,7 +80,8 @@ export interface BestFiveExercise extends ExerciseBase {
 export interface OrderExercise extends ExerciseBase {
   kind: 'order';
   prompt: string;
-  hands: { cards: Card[]; result: string }[];
+  /** Without cards, the names themselves are what gets ordered. */
+  hands: { cards?: Card[]; result: string }[];
   /** Indexes into `hands`, strongest first. */
   order: number[];
   explanation: string;
@@ -89,6 +115,8 @@ export interface SpotExercise extends ExerciseBase {
 
 export type Exercise =
   | NewWordExercise
+  | LadderExercise
+  | WorkedExercise
   | MatchExercise
   | ChoiceExercise
   | CompareExercise

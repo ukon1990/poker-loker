@@ -145,8 +145,21 @@ test('finishing a lesson saves progress and unlocks the next one', async ({ page
 
   await expect(page.getByText('Done').first()).toBeVisible();
   await expect(page.getByRole('link', { name: 'Start lesson' })).toBeVisible();
-  await expect(page.getByText('High card, pair, two pair').first()).toBeVisible();
+  await expect(page.getByText('Small hands').first()).toBeVisible();
   expect(errors).toEqual([]);
+});
+
+test('the second lesson opens with the whole ladder of hands', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/lesson/holdem-1-1');
+  await finishLesson(page);
+  await page.getByRole('link', { name: 'Continue' }).click();
+  await page.getByRole('link', { name: 'Start lesson' }).click();
+
+  await expect(page.getByRole('heading', { name: 'Ten hands, one ladder' })).toBeVisible();
+  const ladder = page.getByRole('region', { name: 'Hand rankings' });
+  await expect(ladder.getByRole('listitem')).toHaveCount(10);
+  await expect(ladder.getByText('5 of one suit')).toBeVisible();
 });
 
 test('a lesson deals new cards each time', async ({ page }) => {

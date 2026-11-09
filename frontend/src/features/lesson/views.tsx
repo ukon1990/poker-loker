@@ -5,19 +5,21 @@ import type {
   CompareExercise,
   Exercise,
   ExerciseKind,
+  LadderExercise,
   MatchExercise,
   NewWordExercise,
   OrderExercise,
   SeatExercise,
   SpotExercise,
+  WorkedExercise,
 } from '@/curriculum/exercises';
-import { buildHand } from '@/curriculum/generators/shared';
 import { getTerm } from '@/curriculum/glossary';
+import { bestFiveMistake, orderMistake, rungForTerm } from '@/curriculum/ladder';
 import { type Card, cards as parseCards } from '@/engine/core/cards';
 import { combinations } from '@/engine/core/combinations';
-import { createRng, deriveSeed } from '@/engine/core/rng';
-import { HandCategory, rankFive } from '@/engine/eval/rank';
+import { rankFive } from '@/engine/eval/rank';
 import { type SeatMark, SeatRing } from '@/features/lesson/SeatRing';
+import { HandLadder, RungNote } from '@/features/terms/HandLadder';
 import { RichText, TermLink } from '@/features/terms/RichText';
 import { type CardSize, EmptyCardSlot, PlayingCard } from '@/ui/PlayingCard';
 
@@ -25,8 +27,8 @@ export interface ExerciseViewProps<E extends Exercise> {
   exercise: E;
   /** True once the answer has been submitted and should be shown as right or wrong. */
   checked: boolean;
-  /** Reports the current answer: right, wrong, or not finished yet. */
-  onAnswer: (correct: boolean | null) => void;
+  /** Reports the current answer: right, wrong, or not finished yet, and what a wrong one missed. */
+  onAnswer: (correct: boolean | null, note?: string, missedSkills?: readonly string[]) => void;
 }
 
 interface ExerciseViewEntry<E extends Exercise> {
@@ -107,7 +109,7 @@ function ChoiceView({ exercise, checked, onAnswer }: ExerciseViewProps<ChoiceExe
             aria-pressed={picked === index}
             onClick={() => {
               setPicked(index);
-              onAnswer(index === exercise.answer);
+              onAnswer(index === exercise.answer, exercise.notes?.[index]);
             }}
             className={`min-h-[52px] rounded-[12px] border-2 px-4 py-2 text-left text-base font-semibold first-letter:uppercase ${optionClasses(picked === index, index === exercise.answer, checked)}`}
           >
@@ -123,36 +125,65 @@ function CompareView({ exercise, checked, onAnswer }: ExerciseViewProps<CompareE
   const [picked, setPicked] = useState<number | null>(null);
   const splitIndex = exercise.hands.length;
   const stacked = exercise.hands[0].cards.length > 2;
+  const showName = (result: string) => (checked || exercise.showNames ? result : '');
 
   const pick = (index: number) => {
     setPicked(index);
-    onAnswer(index === exercise.answer);
+    onAnswer(index === exercise.answer, exercise.notes?.[index]);
   };
 
   return (
     <>
       <Prompt text={exercise.prompt} />
       {exercise.board.length > 0 && <CardRow label="Board" cards={exercise.board} />}
-      <div className={`grid gap-3 ${stacked ? 'grid-cols-1' : 'grid-cols-2'}`}>
-        {exercise.hands.map((hand, index) => (
-          <button
-            key={hand.label}
-            type="button"
-            disabled={checked}
-            aria-pressed={picked === index}
-            onClick={() => pick(index)}
-            className={`flex flex-col items-center gap-2.5 rounded-[14px] border-2 px-2 py-3.5 ${optionClasses(picked === index, index === exercise.answer, checked)}`}
-          >
-            <span className="text-[15px] font-bold">{hand.label}</span>
-            <span className="flex gap-1.5">
-              {hand.cards.map((card) => (
-                <PlayingCard key={card} card={card} size={stacked ? 'sm' : 'md'} />
-              ))}
-            </span>
-            <span className="min-h-[18px] text-[13px] font-bold">{checked ? hand.result : ''}</span>
-          </button>
-        ))}
-      </div>
+      {exercise.hands.length > 2 ? (
+        // Rows line the hands up, so a single different card is easy to spot.
+        <div className="flex flex-col gap-2">
+          {exercise.hands.map((hand, index) => (
+            <button
+              key={hand.label}
+              type="button"
+              disabled={checked}
+              aria-pressed={picked === index}
+              onClick={() => pick(index)}
+              className={`flex items-center gap-3 rounded-[14px] border-2 p-2.5 ${optionClasses(picked === index, index === exercise.answer, checked)}`}
+            >
+              <span className="w-4 flex-none text-[15px] font-bold">{hand.label}</span>
+              <span className="flex flex-col gap-1">
+                <span className="flex gap-1">
+                  {hand.cards.map((card) => (
+                    <PlayingCard key={card} card={card} size="xs" />
+                  ))}
+                </span>
+                <span className="min-h-[18px] text-left text-[13px] font-bold">
+                  {showName(hand.result)}
+                </span>
+              </span>
+            </button>
+          ))}
+        </div>
+      ) : (
+        <div className={`grid gap-3 ${stacked ? 'grid-cols-1' : 'grid-cols-2'}`}>
+          {exercise.hands.map((hand, index) => (
+            <button
+              key={hand.label}
+              type="button"
+              disabled={checked}
+              aria-pressed={picked === index}
+              onClick={() => pick(index)}
+              className={`flex flex-col items-center gap-2.5 rounded-[14px] border-2 px-2 py-3.5 ${optionClasses(picked === index, index === exercise.answer, checked)}`}
+            >
+              <span className="text-[15px] font-bold">{hand.label}</span>
+              <span className="flex gap-1.5">
+                {hand.cards.map((card) => (
+                  <PlayingCard key={card} card={card} size={stacked ? 'sm' : 'md'} />
+                ))}
+              </span>
+              <span className="min-h-[18px] text-[13px] font-bold">{showName(hand.result)}</span>
+            </button>
+          ))}
+        </div>
+      )}
       {exercise.offerSplit && (
         <button
           type="button"
@@ -178,7 +209,12 @@ function BestFiveView({ exercise, checked, onAnswer }: ExerciseViewProps<BestFiv
         ? [...selected, card]
         : selected;
     setSelected(next);
-    onAnswer(next.length === 5 ? rankFive(next) === exercise.bestRank : null);
+    if (next.length < 5) {
+      onAnswer(null);
+      return;
+    }
+    const rank = rankFive(next);
+    onAnswer(rank === exercise.bestRank, bestFiveMistake(rank, exercise.bestRank));
   };
 
   // After checking, show a correct five so a wrong answer can be learned from.
@@ -228,11 +264,12 @@ function OrderView({ exercise, checked, onAnswer }: ExerciseViewProps<OrderExerc
   const toggle = (index: number) => {
     const next = order.includes(index) ? order.filter((v) => v !== index) : [...order, index];
     setOrder(next);
-    onAnswer(
-      next.length === exercise.hands.length
-        ? next.every((value, i) => value === exercise.order[i])
-        : null,
-    );
+    if (next.length < exercise.hands.length) {
+      onAnswer(null);
+      return;
+    }
+    const right = next.every((value, i) => value === exercise.order[i]);
+    onAnswer(right, right ? undefined : orderMistake(next.map((i) => exercise.hands[i].result)));
   };
 
   return (
@@ -244,7 +281,7 @@ function OrderView({ exercise, checked, onAnswer }: ExerciseViewProps<OrderExerc
           const isRight = checked && exercise.order[position] === index;
           return (
             <button
-              key={hand.cards[0]}
+              key={hand.cards?.[0] ?? hand.result}
               type="button"
               disabled={checked}
               aria-pressed={position >= 0}
@@ -254,12 +291,18 @@ function OrderView({ exercise, checked, onAnswer }: ExerciseViewProps<OrderExerc
               <span className="flex size-8 flex-none items-center justify-center rounded-full bg-ground font-card text-lg font-bold text-ink">
                 {position >= 0 ? position + 1 : ''}
               </span>
-              <span className="flex flex-wrap gap-1">
-                {hand.cards.map((card) => (
-                  <PlayingCard key={card} card={card} size="xs" />
-                ))}
-              </span>
-              {checked && <span className="ml-auto text-[13px] font-bold">{hand.result}</span>}
+              {hand.cards ? (
+                <span className="flex flex-wrap gap-1">
+                  {hand.cards.map((card) => (
+                    <PlayingCard key={card} card={card} size="xs" />
+                  ))}
+                </span>
+              ) : (
+                <span className="text-base font-bold">{hand.result}</span>
+              )}
+              {checked && hand.cards && (
+                <span className="ml-auto text-[13px] font-bold">{hand.result}</span>
+              )}
             </button>
           );
         })}
@@ -310,7 +353,7 @@ function SpotView({ exercise, checked, onAnswer }: ExerciseViewProps<SpotExercis
           {slots.map((index) => {
             const card = exercise.board[index];
             return card === undefined ? (
-              <EmptyCardSlot key={index} size="sm" />
+              <EmptyCardSlot key={`empty-${index}`} size="sm" />
             ) : (
               <PlayingCard key={card} card={card} size="sm" />
             );
@@ -358,6 +401,7 @@ function MatchView({ exercise, onAnswer }: ExerciseViewProps<MatchExercise>) {
   const [term, setTerm] = useState<number | null>(null);
   const [matched, setMatched] = useState<number[]>([]);
   const [wrong, setWrong] = useState<number | null>(null);
+  const [missed, setMissed] = useState<readonly string[]>([]);
 
   const pickMeaning = (index: number) => {
     if (term === null) return;
@@ -366,8 +410,10 @@ function MatchView({ exercise, onAnswer }: ExerciseViewProps<MatchExercise>) {
       setMatched(next);
       setTerm(null);
       setWrong(null);
-      if (next.length === exercise.terms.length) onAnswer(true);
+      if (next.length === exercise.terms.length) onAnswer(true, undefined, missed);
     } else {
+      const skill = `term:${exercise.terms[term].termId}`;
+      setMissed((list) => (list.includes(skill) ? list : [...list, skill]));
       setWrong(index);
     }
   };
@@ -384,7 +430,7 @@ function MatchView({ exercise, onAnswer }: ExerciseViewProps<MatchExercise>) {
   return (
     <>
       <Prompt text="Match each word to its meaning" />
-      <div className="grid grid-cols-[112px_minmax(0,1fr)] gap-3">
+      <div className="grid grid-cols-[124px_minmax(0,1fr)] gap-3">
         {exercise.terms.map((entry, row) => {
           const meaningIndex = exercise.meaningOrder[row];
           const meaning = exercise.terms[meaningIndex];
@@ -418,24 +464,7 @@ function MatchView({ exercise, onAnswer }: ExerciseViewProps<MatchExercise>) {
   );
 }
 
-const TERM_HANDS: Partial<Record<string, HandCategory>> = {
-  'high-card': HandCategory.HighCard,
-  pair: HandCategory.Pair,
-  'two-pair': HandCategory.TwoPair,
-  'three-of-a-kind': HandCategory.ThreeOfAKind,
-  trips: HandCategory.ThreeOfAKind,
-  straight: HandCategory.Straight,
-  flush: HandCategory.Flush,
-  'full-house': HandCategory.FullHouse,
-  'four-of-a-kind': HandCategory.FourOfAKind,
-  quads: HandCategory.FourOfAKind,
-  'straight-flush': HandCategory.StraightFlush,
-};
-
-const TERM_FIXED_HANDS: Partial<Record<string, string>> = {
-  'royal-flush': 'Ts Js Qs Ks As',
-  wheel: 'Ah 2c 3d 4s 5h',
-};
+const WHEEL = parseCards('Ah 2c 3d 4s 5h');
 
 const TERM_BOARD_SIZE: Partial<Record<string, number>> = {
   flop: 3,
@@ -457,17 +486,9 @@ const TERM_SEATS: Partial<Record<string, number>> = {
 
 const SAMPLE_BOARD = parseCards('Ks 9d 3d Jc 5h');
 
-function termSeed(termId: string): number {
-  return deriveSeed(...[...termId].map((char) => char.charCodeAt(0)));
-}
-
 function TermVisual({ termId }: { termId: string }) {
-  const hand = useMemo(() => {
-    const fixed = TERM_FIXED_HANDS[termId];
-    if (fixed) return parseCards(fixed);
-    const category = TERM_HANDS[termId];
-    return category === undefined ? null : buildHand(category, createRng(termSeed(termId)));
-  }, [termId]);
+  // First sight of a hand is tidy, so the pattern is easy to see.
+  const hand = termId === 'wheel' ? WHEEL : rungForTerm(termId)?.sample;
 
   if (hand) {
     return (
@@ -522,6 +543,7 @@ function NewWordView({ exercise, onAnswer }: ExerciseViewProps<NewWordExercise>)
         <RichText text={term.long} />
       </p>
       <TermVisual termId={term.id} />
+      <RungNote termId={term.id} />
       {term.example && (
         <div className="rounded-[14px] border border-line bg-surface px-4 py-3.5">
           <div className="mb-1 text-[13px] font-semibold text-ink-2">
@@ -534,11 +556,69 @@ function NewWordView({ exercise, onAnswer }: ExerciseViewProps<NewWordExercise>)
   );
 }
 
+function LadderView({ exercise, onAnswer }: ExerciseViewProps<LadderExercise>) {
+  useEffect(() => onAnswer(true), [onAnswer]);
+
+  return (
+    <>
+      <Prompt text={exercise.prompt} />
+      <p className="m-0 text-lg leading-snug">{exercise.intro}</p>
+      <HandLadder highlight={exercise.highlight} />
+    </>
+  );
+}
+
+function WorkedView({ exercise, onAnswer }: ExerciseViewProps<WorkedExercise>) {
+  useEffect(() => onAnswer(true), [onAnswer]);
+  const ringFor = (card: Card) => (exercise.best?.includes(card) ? ('green' as const) : undefined);
+
+  return (
+    <>
+      <div>
+        <div className="text-sm font-bold text-red">Watch how it’s done</div>
+        <h1 className="m-0 mt-1 text-[28px] leading-tight font-extrabold">{exercise.prompt}</h1>
+      </div>
+      <section aria-label="Worked example" className="flex flex-col gap-4">
+        {exercise.board && (
+          <div>
+            <div className="mb-1.5 text-[15px] font-bold">Board</div>
+            <div className={rowClasses(exercise.board.length)}>
+              {exercise.board.map((card) => (
+                <PlayingCard key={card} card={card} size="sm" ring={ringFor(card)} />
+              ))}
+            </div>
+          </div>
+        )}
+        {exercise.hands.map((hand) => (
+          <div key={hand.label}>
+            <div className="mb-1.5 flex items-baseline justify-between text-[15px] font-bold">
+              <span>{hand.label}</span>
+              <span>{hand.result}</span>
+            </div>
+            <div className={rowClasses(hand.cards.length)}>
+              {hand.cards.map((card) => (
+                <PlayingCard key={card} card={card} size="sm" ring={ringFor(card)} />
+              ))}
+            </div>
+          </div>
+        ))}
+        <ol className="m-0 flex list-decimal flex-col gap-2 pl-6 text-base leading-snug">
+          {exercise.steps.map((step) => (
+            <li key={step}>{step}</li>
+          ))}
+        </ol>
+      </section>
+    </>
+  );
+}
+
 type ViewRegistry = { [K in ExerciseKind]: ExerciseViewEntry<Extract<Exercise, { kind: K }>> };
 
 /** Add an entry here to add an exercise type. The lesson player needs no changes. */
 const VIEWS: ViewRegistry = {
   'new-word': { View: NewWordView, selfChecked: true, actionLabel: 'Got it' },
+  ladder: { View: LadderView, selfChecked: true, actionLabel: 'Got it' },
+  worked: { View: WorkedView, selfChecked: true, actionLabel: 'Got it' },
   match: { View: MatchView, selfChecked: true, actionLabel: 'Continue' },
   choice: { View: ChoiceView },
   compare: { View: CompareView },

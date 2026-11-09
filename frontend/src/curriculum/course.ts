@@ -1,7 +1,10 @@
 import type { Exercise } from '@/curriculum/exercises';
 import { type GeneratorId, generateExercise, type StepSpec } from '@/curriculum/generators';
+import type { HandPair } from '@/curriculum/generators/hands';
 import type { GenContext } from '@/curriculum/generators/shared';
-import { deriveSeed } from '@/engine/core/rng';
+import { LADDER, rungCategory } from '@/curriculum/ladder';
+import { shuffle } from '@/engine/core/deck';
+import { createRng, deriveSeed } from '@/engine/core/rng';
 import { HandCategory as C } from '@/engine/eval/rank';
 import type { VariantId } from '@/engine/variants/types';
 
@@ -37,8 +40,16 @@ function step<K extends GeneratorId>(
 const word = (termId: string) => step('new-word', { termId });
 const match = () => step('match-terms', {});
 const sentence = () => step('complete-sentence', {});
+const ladder = (prompt: string, intro: string, highlight: string[]) =>
+  step('ladder', { prompt, intro, highlight });
+
+const REVIEW_SHUFFLE = 0x72657669;
+const REVIEW_RETRIES = 40;
 
 const RANKINGS = 'hand-rankings';
+const DECK = 'the-deck';
+const CLOSE_CALLS = 'close-calls';
+const HAND_ORDER = 'hand-order';
 const COMPARING = 'comparing-hands';
 const BOARD = 'reading-the-board';
 const BEST5 = 'best-five';
@@ -62,9 +73,24 @@ const TILT = 'tilt';
 const SPOTS = 'playing-spots';
 
 const LOWER = [C.HighCard, C.Pair, C.TwoPair];
-const MIDDLE = [...LOWER, C.ThreeOfAKind, C.Straight, C.Flush];
+const SMALL = [...LOWER, C.ThreeOfAKind];
+const MIDDLE = [...SMALL, C.Straight, C.Flush];
 const ALL = [...MIDDLE, C.FullHouse, C.FourOfAKind, C.StraightFlush];
 const COMMON = [C.HighCard, C.Pair, C.TwoPair, C.ThreeOfAKind, C.Straight, C.Flush, C.FullHouse];
+
+// Neighbours on the ladder, which are the hands people mix up.
+const CLOSE_ALL: HandPair[] = [
+  [C.Pair, C.TwoPair],
+  [C.TwoPair, C.ThreeOfAKind],
+  [C.ThreeOfAKind, C.Straight],
+  [C.Straight, C.Flush],
+  [C.Flush, C.FullHouse],
+  [C.FullHouse, C.FourOfAKind],
+  [C.FourOfAKind, C.StraightFlush],
+];
+
+const close = (first: (typeof C)[keyof typeof C], second: (typeof C)[keyof typeof C]) =>
+  step('compare-hands', { pairs: [[first, second]] }, CLOSE_CALLS);
 
 function unit(n: number, title: string, suit: UnitSuit, lessons: [string, StepSpec[]][]): Unit {
   const ranks = ['A', '2', '3', '4', '5'];
@@ -89,72 +115,158 @@ export const HOLDEM_COURSE: Course = {
         'Meet the deck',
         [
           word('rank'),
-          step('higher-card', {}, RANKINGS),
-          step('higher-card', {}, RANKINGS),
+          step('higher-card', {}, DECK),
+          step('higher-card', {}, DECK),
           word('suit'),
-          step('deck-fact', {}, RANKINGS),
-          step('deck-fact', {}, RANKINGS),
+          step('deck-fact', {}, DECK),
+          step('deck-fact', { fact: 'per-rank' }, DECK),
           word('hand'),
           match(),
         ],
       ],
       [
-        'High card, pair, two pair',
+        'Small hands',
         [
+          ladder(
+            'Ten hands, one ladder',
+            'Every hand has a place on this ladder and beats everything below it. Today you learn the four small hands.',
+            ['high-card', 'pair', 'two-pair', 'three-of-a-kind'],
+          ),
           word('high-card'),
           word('pair'),
-          step('name-hand', { categories: [C.HighCard, C.Pair] }, RANKINGS),
+          step(
+            'name-hand',
+            { categories: [C.HighCard, C.Pair], target: C.HighCard, tidy: true },
+            RANKINGS,
+          ),
+          step(
+            'name-hand',
+            { categories: [C.HighCard, C.Pair], target: C.Pair, tidy: true },
+            RANKINGS,
+          ),
           word('two-pair'),
-          step('name-hand', { categories: LOWER }, RANKINGS),
-          step('compare-hands', { categories: LOWER }, COMPARING),
-          step('compare-hands', { categories: LOWER }, COMPARING),
-          match(),
-        ],
-      ],
-      [
-        'Three of a kind to flush',
-        [
+          step('name-hand', { categories: LOWER, target: C.TwoPair, tidy: true }, RANKINGS),
+          step('worked-compare', { pair: [C.Pair, C.HighCard] }),
+          step('compare-hands', { pairs: [[C.Pair, C.TwoPair]], showNames: true }, CLOSE_CALLS),
           word('three-of-a-kind'),
-          step('name-hand', { categories: [C.TwoPair, C.ThreeOfAKind, C.Pair] }, RANKINGS),
-          word('straight'),
-          step('name-hand', { categories: [C.ThreeOfAKind, C.Straight, C.HighCard] }, RANKINGS),
-          word('flush'),
-          step('name-hand', { categories: MIDDLE }, RANKINGS),
-          step('compare-hands', { categories: MIDDLE }, COMPARING),
-          step('compare-hands', { categories: MIDDLE }, COMPARING),
+          step(
+            'name-hand',
+            { categories: [C.Pair, C.TwoPair, C.ThreeOfAKind], target: C.ThreeOfAKind, tidy: true },
+            RANKINGS,
+          ),
+          close(C.TwoPair, C.ThreeOfAKind),
+          step('name-hand', { categories: SMALL }, RANKINGS),
           match(),
         ],
       ],
       [
-        'Full house and up',
+        'Strong hands',
         [
+          step('ladder-next', { upTo: 'three-of-a-kind', direction: 'up' }, HAND_ORDER),
+          ladder(
+            'Three strong hands',
+            'Today you meet the straight, the flush and the full house. Each step up is a rarer hand, and that is why it wins.',
+            ['straight', 'flush', 'full-house'],
+          ),
+          word('straight'),
+          step(
+            'name-hand',
+            {
+              categories: [C.ThreeOfAKind, C.Straight, C.HighCard],
+              target: C.Straight,
+              tidy: true,
+            },
+            RANKINGS,
+          ),
+          word('wheel'),
+          step('concept', { id: 'ace-low' }, RANKINGS),
+          word('flush'),
+          step(
+            'name-hand',
+            { categories: [C.Straight, C.Flush, C.Pair], target: C.Flush, tidy: true },
+            RANKINGS,
+          ),
+          step('look-alike', { family: 'run', target: 'flush' }, RANKINGS),
+          close(C.ThreeOfAKind, C.Straight),
+          step('concept', { id: 'why-flush-beats-straight' }, RANKINGS),
+          close(C.Straight, C.Flush),
           word('full-house'),
-          step('name-hand', { categories: [C.ThreeOfAKind, C.TwoPair, C.FullHouse] }, RANKINGS),
+          step(
+            'name-hand',
+            {
+              categories: [C.ThreeOfAKind, C.TwoPair, C.FullHouse],
+              target: C.FullHouse,
+              tidy: true,
+            },
+            RANKINGS,
+          ),
+          close(C.Flush, C.FullHouse),
+          match(),
+        ],
+      ],
+      [
+        'Monsters',
+        [
+          step('ladder-next', { upTo: 'full-house' }, HAND_ORDER),
+          ladder(
+            'The top of the ladder',
+            'These are the strongest hands in the game. Notice that five of a kind is not here.',
+            ['four-of-a-kind', 'straight-flush', 'royal-flush'],
+          ),
           word('four-of-a-kind'),
-          step('name-hand', { categories: [C.FullHouse, C.FourOfAKind, C.ThreeOfAKind] }, RANKINGS),
+          word('quads'),
+          step(
+            'name-hand',
+            {
+              categories: [C.FullHouse, C.FourOfAKind, C.ThreeOfAKind],
+              target: C.FourOfAKind,
+              tidy: true,
+            },
+            RANKINGS,
+          ),
+          step('look-alike', { family: 'matching', target: 'full-house' }, RANKINGS),
           word('straight-flush'),
           word('royal-flush'),
           step(
             'name-hand',
-            { categories: [C.Straight, C.Flush, C.StraightFlush, C.FullHouse] },
+            {
+              categories: [C.Straight, C.Flush, C.StraightFlush],
+              target: C.StraightFlush,
+              tidy: true,
+            },
             RANKINGS,
           ),
-          step('compare-hands', { categories: ALL }, COMPARING),
+          step('look-alike', { family: 'royal', target: 'royal-flush' }, RANKINGS),
+          step('concept', { id: 'royal-is-straight-flush' }, RANKINGS),
+          step('look-alike', { family: 'royal', target: 'flush' }, RANKINGS),
+          close(C.FullHouse, C.FourOfAKind),
+          close(C.FourOfAKind, C.StraightFlush),
+          step('concept', { id: 'five-of-a-kind' }, RANKINGS),
           match(),
         ],
       ],
       [
         'Rank them all',
         [
-          word('trips'),
-          word('quads'),
-          word('wheel'),
-          step('order-hands', { categories: LOWER, count: 3 }, RANKINGS),
-          step('order-hands', { categories: MIDDLE, count: 3 }, RANKINGS),
+          step('ladder-next', { direction: 'up' }, HAND_ORDER),
+          step('ladder-next', { direction: 'down' }, HAND_ORDER),
+          step('order-names', { count: 4 }, HAND_ORDER),
+          ladder(
+            'The whole ladder',
+            'Matching ranks climb: 2, 2 + 2, 3, 3 + 2, 4. A straight and a flush fit between 3 and 3 + 2. A straight flush is both.',
+            [],
+          ),
+          step('concept', { id: 'matching-climb' }, HAND_ORDER),
           step('order-hands', { categories: ALL, count: 4 }, RANKINGS),
+          step('worked-compare', { pair: [C.Pair, C.Pair] }),
+          step('compare-same', { categories: [C.Pair, C.TwoPair] }, COMPARING),
+          step('compare-same', { categories: [C.Flush] }, COMPARING),
+          step('compare-same', { categories: [C.FullHouse] }, COMPARING),
+          close(C.Straight, C.Flush),
+          close(C.Flush, C.FullHouse),
           step('name-hand', { categories: ALL }, RANKINGS),
-          step('compare-hands', { categories: ALL }, COMPARING),
-          step('order-hands', { categories: ALL, count: 4 }, RANKINGS),
+          step('order-names', { count: 6 }, HAND_ORDER),
+          step('order-names', { count: 10 }, HAND_ORDER),
           match(),
         ],
       ],
@@ -166,15 +278,17 @@ export const HOLDEM_COURSE: Course = {
           word('hole-cards'),
           word('community-cards'),
           word('board'),
+          step('worked-best-five', { categories: [C.Flush, C.Straight] }),
+          step('best-five', { categories: [C.Straight, C.Flush] }, BEST5),
           word('flop'),
           word('turn'),
           word('river'),
           word('street'),
           step('street-fact', {}, FLOW),
           step('street-fact', {}, FLOW),
-          step('best-five', { categories: LOWER }, BEST5),
-          step('best-five', { categories: MIDDLE }, BEST5),
+          step('best-five', { categories: [C.FullHouse, C.Straight, C.Flush] }, BEST5),
           step('name-seven', { categories: COMMON }, BOARD),
+          step('ladder-next', {}, HAND_ORDER),
           match(),
           sentence(),
         ],
@@ -182,9 +296,12 @@ export const HOLDEM_COURSE: Course = {
       [
         'Kickers',
         [
+          step('compare-same', { categories: [C.ThreeOfAKind, C.Straight] }, COMPARING),
           word('kicker'),
+          step('worked-kicker', {}),
           step('board-compare', { pattern: 'kicker' }, KICKERS),
           step('board-compare', { pattern: 'kicker' }, KICKERS),
+          step('best-five', { categories: LOWER }, BEST5),
           step('board-compare', { winner: [C.ThreeOfAKind], loser: [C.TwoPair] }, COMPARING),
           step('board-compare', { winner: [C.TwoPair], loser: [C.Pair] }, COMPARING),
           step('board-compare', { pattern: 'kicker' }, KICKERS),
@@ -192,11 +309,12 @@ export const HOLDEM_COURSE: Course = {
         ],
       ],
       [
-        'The board plays',
+        'Straights, flushes, full houses',
         [
           word('nuts'),
           step('board-compare', { winner: [C.Straight, C.Flush], loser: LOWER }, COMPARING),
           step('best-five', { categories: [C.Straight, C.Flush] }, BEST5),
+          step('board-compare', { winner: [C.Flush], loser: [C.Straight] }, CLOSE_CALLS),
           step('board-compare', { winner: [C.FullHouse], loser: MIDDLE }, COMPARING),
           step('best-five', { categories: [C.FullHouse, C.Flush] }, BEST5),
           step('name-seven', { categories: COMMON }, BOARD),
@@ -220,7 +338,10 @@ export const HOLDEM_COURSE: Course = {
       [
         'Read them all',
         [
+          word('trips'),
           word('set'),
+          step('ladder-next', {}, HAND_ORDER),
+          step('look-alike', { family: 'matching', target: 'three-of-a-kind' }, RANKINGS),
           step('board-compare', {}, COMPARING),
           step('best-five', { categories: COMMON }, BEST5),
           step('name-seven', { categories: COMMON }, BOARD),
@@ -673,7 +794,10 @@ export function generateLesson(course: Course, lesson: Lesson, seed: number): Ex
 
 /** One drill for each skill, used by review sessions to deal new cards. */
 export const SKILL_DRILLS: Record<string, StepSpec> = {
+  [DECK]: step('deck-fact', {}, DECK),
   [RANKINGS]: step('order-hands', { categories: ALL, count: 3 }, RANKINGS),
+  [CLOSE_CALLS]: step('compare-hands', { pairs: CLOSE_ALL }, CLOSE_CALLS),
+  [HAND_ORDER]: step('order-names', { count: 5 }, HAND_ORDER),
   [COMPARING]: step('board-compare', {}, COMPARING),
   [BOARD]: step('name-seven', { categories: COMMON }, BOARD),
   [BEST5]: step('best-five', { categories: COMMON }, BEST5),
@@ -706,7 +830,10 @@ export const SKILL_DRILLS: Record<string, StepSpec> = {
 };
 
 export const SKILL_NAMES: Record<string, string> = {
+  [DECK]: 'The deck',
   [RANKINGS]: 'Hand rankings',
+  [CLOSE_CALLS]: 'Close calls between hands',
+  [HAND_ORDER]: 'Order of the hands',
   [COMPARING]: 'Comparing hands',
   [BOARD]: 'Reading the board',
   [BEST5]: 'Best five cards',
@@ -730,18 +857,91 @@ export const SKILL_NAMES: Record<string, string> = {
   [SPOTS]: 'Playing a spot',
 };
 
-/** A review session for these skills, with new cards each time. */
+/** What makes a question the same question, ignoring how its answers happen to be shuffled. */
+function fingerprint(exercise: Exercise): string {
+  return JSON.stringify(exercise, (key, value) =>
+    key === 'options' || key === 'notes' || key === 'answer' ? undefined : value,
+  );
+}
+
+/** Review questions drop the help they first came with, and range over everything taught. */
+function forReview(spec: StepSpec, knownTerms: readonly string[]): StepSpec {
+  const taught = LADDER.filter((rung) => knownTerms.includes(rung.termId));
+  switch (spec.gen) {
+    case 'compare-hands':
+      return { ...spec, params: { ...spec.params, showNames: false } } as StepSpec;
+    case 'name-hand': {
+      const categories = [...new Set(taught.map(rungCategory))];
+      return categories.length < 2 ? spec : ({ ...spec, params: { categories } } as StepSpec);
+    }
+    case 'ladder-next':
+      return { ...spec, params: { upTo: taught.at(-1)?.termId } } as StepSpec;
+    default:
+      return spec;
+  }
+}
+
+/** For a hand's own review: name that hand, with the other hands taught so far as options. */
+function handTermDrill(termId: string, knownTerms: readonly string[]): StepSpec | undefined {
+  const rung = LADDER.find((entry) => entry.termId === termId);
+  // A word looked up at the table may not be taught yet, and then only its meaning is fair.
+  if (!rung || termId === 'royal-flush' || !knownTerms.includes(termId)) return undefined;
+  const target = rungCategory(rung);
+  const others = LADDER.filter(
+    (entry) =>
+      entry !== rung && entry.termId !== 'royal-flush' && knownTerms.includes(entry.termId),
+  ).map(rungCategory);
+  return others.length === 0
+    ? undefined
+    : step('name-hand', { categories: [...others, target], target });
+}
+
+/**
+ * A review session for these skills, with new cards each time. Questions come from the lessons
+ * already finished, so review never asks about something that has not been taught.
+ */
 export function generateReview(
   skillIds: readonly string[],
   seed: number,
   knownTerms: readonly string[],
+  completedLessons: readonly string[] = [],
 ): Exercise[] {
   const context: GenContext = { knownTerms, lessonTerms: [] };
+  const rng = createRng(deriveSeed(seed, REVIEW_SHUFFLE));
+  const finished = allLessons(HOLDEM_COURSE).filter((lesson) =>
+    completedLessons.includes(lesson.id),
+  );
+  const taught = finished.flatMap((lesson) => lesson.steps);
+  const decks = new Map<string, StepSpec[]>();
+  const asked = new Set<string>();
+
+  /** Deals out the steps for a skill without repeats, then starts over. */
+  const nextTaught = (skillId: string): StepSpec | undefined => {
+    let deck = decks.get(skillId);
+    if (!deck || deck.length === 0) {
+      deck = shuffle(
+        taught.filter((entry) => entry.skills.includes(skillId)),
+        rng,
+      );
+      decks.set(skillId, deck);
+    }
+    const next = deck.pop();
+    return next && forReview(next, knownTerms);
+  };
 
   return skillIds.flatMap((skillId, index) => {
     const spec: StepSpec | undefined = skillId.startsWith('term:')
-      ? step('term-meaning', { termId: skillId.slice(5) })
-      : SKILL_DRILLS[skillId];
-    return spec ? [generateExercise(spec, deriveSeed(seed, index), context)] : [];
+      ? (handTermDrill(skillId.slice(5), knownTerms) ??
+        step('term-meaning', { termId: skillId.slice(5) }))
+      : (nextTaught(skillId) ??
+        (completedLessons.length === 0 ? SKILL_DRILLS[skillId] : undefined));
+    if (!spec) return [];
+
+    let exercise = generateExercise(spec, deriveSeed(seed, index), context);
+    for (let retry = 1; retry < REVIEW_RETRIES && asked.has(fingerprint(exercise)); retry++) {
+      exercise = generateExercise(spec, deriveSeed(seed, index, retry), context);
+    }
+    asked.add(fingerprint(exercise));
+    return [exercise];
   });
 }

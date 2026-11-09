@@ -2,6 +2,7 @@ import { useSuspenseQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { GLOSSARY, TERM_CATEGORIES, type TermCategory } from '@/curriculum/glossary';
 import { dashboardQuery } from '@/db/queries';
+import { HandLadderPanel } from '@/features/terms/HandLadder';
 import { openTerm } from '@/features/terms/term-store';
 import { localDay } from '@/learning/days';
 
@@ -68,6 +69,8 @@ export function GlossaryScreen() {
           </button>
         ))}
       </div>
+
+      {query === '' && (category === 'all' || category === 'hands') && <HandLadderPanel />}
 
       {TERM_CATEGORIES.map((group) => {
         const terms = matches

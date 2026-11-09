@@ -178,7 +178,7 @@ function Felt({
           const card = view.board[index];
           return card === undefined ? (
             // biome-ignore lint/suspicious/noArrayIndexKey: empty slots have nothing else to key on.
-            <EmptyCardSlot key={index} size={desktop ? 'md' : 'xs'} />
+            <EmptyCardSlot key={`empty-${index}`} size={desktop ? 'md' : 'xs'} />
           ) : (
             <PlayingCard key={card} card={card} size={desktop ? 'md' : 'xs'} />
           );

@@ -60,18 +60,37 @@ interface GlossaryTerm {
 | Positions          | button, under the gun, hijack, cutoff, early, middle and late position, in position, out of position                                                                                                 |
 | Maths and strategy | outs, equity, pot odds, implied odds, range, draw, continuation bet, value bet, bluff, semi-bluff, board texture, tilt, bankroll                                                                     |
 
+## Teaching the hand rankings
+
+Recognising a hand and knowing where it ranks are separate skills, so the course teaches both on purpose. The ranking lives in one place, `frontend/src/curriculum/ladder.ts`: ten rungs in three groups (small hands, hands where all five cards work, monsters). The engine has nine categories, because to it a royal flush is a straight flush, and `handName` gives the name players know.
+
+- **Teach one group at a time.** The ladder's three groups are the lessons: small hands, strong hands, monsters. Lesson 1-5 ranks them all together.
+- **See the whole ladder first.** Lessons 1-2 to 1-4 open with the ladder, with that lesson's hands picked out, and partway through 1-5 it returns with the idea that rebuilds it. Each rung says what makes the hand. Any hand's definition sheet and the Glossary have it one tap away.
+- **Recall before seeing.** Lessons 1-3 and 1-4 ask from memory about the rungs taught so far before showing the ladder again. Ordering by name builds from 4 to 6 to all 10. The first question after a new hand is always about that hand.
+- **Worked examples, then fading.** A worked comparison shows the steps. The next comparison shows the hand names, and the one after is unaided. The first question on a new hand deals its cards in order, and later ones are shuffled.
+- **Say why.** Every step up the ladder is rarer in five random cards. Five-card comparisons give that reason. Board exercises from Unit 2 on leave it out, so the help fades. The claim holds for five cards only: with seven, a pair is more common than no pair.
+- **Practise the mix-ups.** Each lesson step names the close call it deals, so every neighbouring pair appears in Unit 1 and straight against flush and flush against full house appear twice. Close calls keep the most alike of several deals. Look-alikes put four hands on one screen, lined up, each a card or two apart. Each hand also has its own review record, so review returns to the hands that slip.
+- **Recall the order from memory.** Next-step questions and ordering hand names use no cards, so they test the ranking and not reading the cards.
+- **Feedback on the actual mistake.** A wrong answer also says what the learner picked and why it was wrong, or names the first pair put the wrong way round, or says what to do next time.
+
+The rarity figures are checked by a test that enumerates all 2,598,960 five-card hands.
+
 ## Exercise types
 
 Each type is an entry in a renderer registry, so adding one does not touch the lesson player.
 
 - New word card
+- Hand ladder overview
+- Worked comparison
 - Match terms to meanings
 - Spot the term on a table (tap the flop, the button, the big blind)
 - Complete the sentence
 - Multiple choice
-- Pick the winning hand
+- Pick the winning hand, including close calls and two hands of the same type
+- Pick the look-alike from four hands side by side
 - Tap the best five cards
-- Order the hands
+- Order the hands, by their cards or by name
+- Name the next step on the ladder
 - Count the outs
 - Calculate pot odds
 - Fold, call, or raise at a given position
@@ -94,7 +113,7 @@ A test runs every generator across thousands of seeds and independently re-check
 
 ## Mastery and review
 
-Every exercise is tagged with skills. Each skill has a Leitner box per variant. Correct answers move it up and lengthen the review interval, and wrong answers move it down. A "Review" session draws from what is due.
+Every exercise is tagged with skills. Each skill has a Leitner box per variant. A correct answer on a due skill moves it up and lengthens the review interval, and a wrong answer moves it down. Correct answers before the due day are extra practice and do not move it, so several in one sitting do not count as several spaced reviews. A "Review" session draws from what is due, and asks only questions from lessons already finished, across all the hands taught, without the help they first came with, and without asking the same question twice while others remain. Wrong pairs in a matching exercise count against those words.
 
 ## Motivation
 

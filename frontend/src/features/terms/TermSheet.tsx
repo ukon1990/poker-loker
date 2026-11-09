@@ -6,6 +6,7 @@ import { getTerm } from '@/curriculum/glossary';
 import { db } from '@/db/client';
 import { addTermToReview } from '@/db/progress';
 import { dashboardQuery } from '@/db/queries';
+import { TermLadder } from '@/features/terms/HandLadder';
 import { RichText } from '@/features/terms/RichText';
 import { closeTerm, termStore } from '@/features/terms/term-store';
 import { button } from '@/ui/button';
@@ -54,6 +55,8 @@ export function TermSheet() {
           <p className="m-0 text-base leading-normal">
             <RichText text={term.long} source={open?.source} />
           </p>
+
+          <TermLadder termId={term.id} />
 
           {open?.context && (
             <div className="rounded-xl bg-ground px-3.5 py-3">

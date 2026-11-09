@@ -45,6 +45,8 @@ export const CATEGORY_NAMES: Record<HandCategory, string> = {
   [HandCategory.StraightFlush]: 'Straight flush',
 };
 
+export const ROYAL_FLUSH = 'Royal flush';
+
 /** Glossary id for each category. */
 export const CATEGORY_TERMS: Record<HandCategory, string> = {
   [HandCategory.HighCard]: 'high-card',
@@ -112,13 +114,23 @@ export function describeHand(rank: HandRank): string {
   }
 }
 
+function isRoyal(rank: HandRank): boolean {
+  return categoryOf(rank) === HandCategory.StraightFlush && tiebreaks(rank)[0] === 14;
+}
+
+/** The name players know a hand by. A royal flush is only a straight flush to the engine. */
+export function handName(rank: HandRank): string {
+  return isRoyal(rank) ? ROYAL_FLUSH : CATEGORY_NAMES[categoryOf(rank)];
+}
+
 /** The description, marked so the whole phrase links to its glossary entry. */
 export function describeHandMarked(rank: HandRank): string {
-  return `{${CATEGORY_TERMS[categoryOf(rank)]}|${describeHand(rank)}}`;
+  const term = isRoyal(rank) ? 'royal-flush' : CATEGORY_TERMS[categoryOf(rank)];
+  return `{${term}|${describeHand(rank)}}`;
 }
 
 /** Why one hand beats another that has the same short description, in words. */
-function firstDifference(winner: HandRank, loser: HandRank): string {
+export function firstDifference(winner: HandRank, loser: HandRank): string {
   const a = tiebreaks(winner);
   const b = tiebreaks(loser);
   const index = a.findIndex((value, i) => value !== b[i]);
@@ -136,7 +148,9 @@ export function explainWin(
   const loserText = describeHand(loser);
 
   if (winnerText === loserText) {
-    return `${winnerName} and ${loserName} both have ${describeHandMarked(winner)}. The {kicker} decides it: ${firstDifference(winner, loser)}.`;
+    // All five cards of a flush are part of the hand, so none of them is a kicker.
+    const decider = categoryOf(winner) === HandCategory.Flush ? 'next highest card' : '{kicker}';
+    return `${winnerName} and ${loserName} both have ${describeHandMarked(winner)}. The ${decider} decides it: ${firstDifference(winner, loser)}.`;
   }
   return `${winnerName} has ${describeHandMarked(winner)}, which beats ${describeHandMarked(loser)}.`;
 }

@@ -55,6 +55,15 @@ describe('lesson run', () => {
   });
 });
 
+describe('finishing an exercise with some parts wrong', () => {
+  it('moves on, but counts it as missed for the skills that were wrong', () => {
+    const run = answerCurrent(startRun(2), true, ['term:flop']);
+    expect(currentExercise(run)).toBe(1);
+    expect(run.missed).toEqual([0]);
+    expect(run.missedSkills).toEqual({ 0: ['term:flop'] });
+  });
+});
+
 describe('mastery', () => {
   const today = '2026-11-08';
 
@@ -63,17 +72,32 @@ describe('mastery', () => {
     expect(entry).toMatchObject({ box: 1, dueDay: addDays(today, 1), incorrect: 1 });
   });
 
-  it('waits longer as answers stay correct', () => {
+  it('waits longer as answers stay correct on their due days', () => {
     let entry = updateMastery(undefined, 'holdem-nl', 'outs', true, today);
     const firstWait = entry.dueDay;
-    entry = updateMastery(entry, 'holdem-nl', 'outs', true, today);
+    entry = updateMastery(entry, 'holdem-nl', 'outs', true, entry.dueDay);
     expect(entry.box).toBe(3);
     expect(entry.dueDay > firstWait).toBe(true);
   });
 
+  it('does not count repeats before the due day as spaced reviews', () => {
+    const first = updateMastery(undefined, 'holdem-nl', 'outs', true, today);
+    let entry = first;
+    for (let i = 0; i < 4; i++) entry = updateMastery(entry, 'holdem-nl', 'outs', true, today);
+    expect(entry).toMatchObject({ box: first.box, dueDay: first.dueDay, correct: 5 });
+  });
+
+  it('still moves down for a miss before the due day', () => {
+    const first = updateMastery(undefined, 'holdem-nl', 'outs', true, today);
+    const missed = updateMastery(first, 'holdem-nl', 'outs', false, today);
+    expect(missed).toMatchObject({ box: first.box - 1, dueDay: addDays(today, 1), incorrect: 1 });
+  });
+
   it('stays within the boxes', () => {
     let entry = updateMastery(undefined, 'holdem-nl', 'outs', true, today);
-    for (let i = 0; i < 10; i++) entry = updateMastery(entry, 'holdem-nl', 'outs', true, today);
+    for (let i = 0; i < 10; i++) {
+      entry = updateMastery(entry, 'holdem-nl', 'outs', true, entry.dueDay);
+    }
     expect(entry.box).toBe(MAX_BOX);
     for (let i = 0; i < 10; i++) entry = updateMastery(entry, 'holdem-nl', 'outs', false, today);
     expect(entry.box).toBe(1);

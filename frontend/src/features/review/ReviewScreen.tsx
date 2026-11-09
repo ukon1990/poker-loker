@@ -1,7 +1,7 @@
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import { useState } from 'react';
-import { generateReview } from '@/curriculum/course';
+import { allLessons, generateReview, HOLDEM_COURSE, lessonTerms } from '@/curriculum/course';
 import { dashboardQuery } from '@/db/queries';
 import { LessonPlayer } from '@/features/lesson/LessonPlayer';
 import { randomSeed } from '@/learning/seed';
@@ -15,15 +15,27 @@ export function ReviewScreen({ skill }: { skill?: string }) {
 
   // Fixed on arrival, so saving progress mid-session can't change the questions.
   const [exercises] = useState(() => {
+    const completed = data.progress
+      .filter((entry) => entry.status === 'completed')
+      .map((entry) => entry.lessonId);
+    const known = allLessons(HOLDEM_COURSE)
+      .filter((lesson) => completed.includes(lesson.id))
+      .flatMap(lessonTerms);
+
     if (skill) {
-      return generateReview(Array<string>(SINGLE_SKILL_SIZE).fill(skill), randomSeed(), []);
+      return generateReview(
+        Array<string>(SINGLE_SKILL_SIZE).fill(skill),
+        randomSeed(),
+        known,
+        completed,
+      );
     }
     const pool = data.dueSkills.length > 0 ? data.dueSkills : data.mastery;
     const skills = [...pool]
       .sort((a, b) => a.box - b.box)
       .slice(0, SESSION_SIZE)
       .map((entry) => entry.skillId);
-    return generateReview(skills, randomSeed(), []);
+    return generateReview(skills, randomSeed(), known, completed);
   });
 
   if (exercises.length === 0) {

@@ -5,6 +5,8 @@ export interface LessonRun {
   total: number;
   /** Exercises that were wrong at least once. */
   missed: number[];
+  /** For exercises finished with some parts wrong: the skills that were missed. */
+  missedSkills?: Record<number, readonly string[]>;
 }
 
 export const XP_FIRST_TRY = 10;
@@ -19,9 +21,21 @@ export function currentExercise(run: LessonRun): number | null {
 }
 
 /** A wrong answer goes to the end of the queue, with the same cards. */
-export function answerCurrent(run: LessonRun, correct: boolean): LessonRun {
+export function answerCurrent(
+  run: LessonRun,
+  correct: boolean,
+  missedSkills: readonly string[] = [],
+): LessonRun {
   const [current, ...rest] = run.queue;
   if (current === undefined) return run;
+  if (correct && missedSkills.length > 0) {
+    return {
+      ...run,
+      queue: rest,
+      missed: [...run.missed, current],
+      missedSkills: { ...run.missedSkills, [current]: missedSkills },
+    };
+  }
   if (correct) return { ...run, queue: rest };
 
   return {

@@ -74,6 +74,8 @@ export function LessonPlayer({
   const queryClient = useQueryClient();
   const [run, setRun] = useState(() => startRun(exercises.length));
   const [answer, setAnswer] = useState<boolean | null>(null);
+  const [note, setNote] = useState<string>();
+  const [missedSkills, setMissedSkills] = useState<readonly string[]>([]);
   const [checked, setChecked] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [leaving, setLeaving] = useState(false);
@@ -81,10 +83,19 @@ export function LessonPlayer({
   const save = useMutation({
     mutationFn: (finalRun: typeof run) =>
       saveRun(db, { variantId: 'holdem-nl', lessonId, exercises, run: finalRun }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: dashboardQuery.queryKey }),
+    // 'all' refreshes the path while it is off screen, so it never shows the old state on return.
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: dashboardQuery.queryKey, refetchType: 'all' }),
   });
 
-  const onAnswer = useCallback((value: boolean | null) => setAnswer(value), []);
+  const onAnswer = useCallback(
+    (value: boolean | null, wrongNote?: string, skills: readonly string[] = []) => {
+      setAnswer(value);
+      setNote(wrongNote);
+      setMissedSkills(skills);
+    },
+    [],
+  );
 
   if (save.data) return <Finished result={save.data} title={finishedTitle} reward={reward} />;
 
@@ -98,9 +109,11 @@ export function LessonPlayer({
   const missedBefore = run.missed.includes(index);
 
   const advance = () => {
-    const next = answerCurrent(run, answer === true);
+    const next = answerCurrent(run, answer === true, missedSkills);
     setRun(next);
     setAnswer(null);
+    setNote(undefined);
+    setMissedSkills([]);
     setChecked(false);
     setAttempt((value) => value + 1);
     if (isFinished(next)) save.mutate(next);
@@ -186,6 +199,7 @@ export function LessonPlayer({
               </span>
             </div>
             <p className="m-0 text-base leading-snug">
+              {!answer && note && <span className="mb-1.5 block font-bold">{note}</span>}
               <RichText text={explanation} />
               {!answer && ' You’ll see this one again before the lesson ends.'}
             </p>

@@ -14,12 +14,20 @@ import {
   bestFive,
   boardCompare,
   compareHands,
+  compareSame,
   type Draft,
   deckFact,
   higherCard,
+  ladderNext,
+  ladderStep,
+  lookAlike,
   nameHand,
   nameSeven,
   orderHands,
+  orderNames,
+  workedBestFive,
+  workedCompare,
+  workedKicker,
 } from '@/curriculum/generators/hands';
 import type { GenContext } from '@/curriculum/generators/shared';
 import { playSpot } from '@/curriculum/generators/spots';
@@ -59,12 +67,20 @@ const GENERATORS = {
   concept,
   'higher-card': higherCard,
   'deck-fact': deckFact,
+  ladder: ladderStep,
   'name-hand': nameHand,
+  'look-alike': lookAlike,
+  'worked-compare': workedCompare,
+  'worked-best-five': workedBestFive,
+  'worked-kicker': workedKicker,
   'name-seven': nameSeven,
   'compare-hands': compareHands,
+  'compare-same': compareSame,
   'board-compare': boardCompare,
   'best-five': bestFive,
   'order-hands': orderHands,
+  'order-names': orderNames,
+  'ladder-next': ladderNext,
   'seat-role': seatRole,
   'pot-after-call': potAfterCall,
   'amount-to-call': amountToCall,
@@ -98,5 +114,5 @@ export interface StepSpec<K extends GeneratorId = GeneratorId> {
 export function generateExercise(spec: StepSpec, seed: number, context: GenContext): Exercise {
   const generator = GENERATORS[spec.gen] as Generator;
   const draft = generator(spec.params, createRng(seed), context);
-  return { ...draft, skills: [...spec.skills, ...(draft.skills ?? [])] } as Exercise;
+  return { ...draft, skills: [...new Set([...spec.skills, ...(draft.skills ?? [])])] } as Exercise;
 }

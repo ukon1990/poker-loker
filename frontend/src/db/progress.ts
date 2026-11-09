@@ -12,7 +12,8 @@ export interface RunResult {
   firstTry: number;
 }
 
-const isGraded = (exercise: Exercise) => exercise.kind !== 'new-word';
+const UNGRADED: readonly Exercise['kind'][] = ['new-word', 'ladder', 'worked'];
+const isGraded = (exercise: Exercise) => !UNGRADED.includes(exercise.kind);
 
 /** Saves a finished lesson or review as one transaction, so it can't be half recorded. */
 export async function saveRun(
@@ -55,9 +56,14 @@ export async function saveRun(
           day: today,
         });
 
+        const partlyMissed = run.missedSkills?.[index];
         for (const skillId of exercise.skills) {
           const previous = await getSkillMastery(db, variantId, skillId);
-          await saveSkillMastery(db, updateMastery(previous, variantId, skillId, correct, today));
+          const skillCorrect = partlyMissed ? !partlyMissed.includes(skillId) : correct;
+          await saveSkillMastery(
+            db,
+            updateMastery(previous, variantId, skillId, skillCorrect, today),
+          );
         }
       }
 
