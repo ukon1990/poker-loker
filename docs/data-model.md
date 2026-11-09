@@ -1,6 +1,6 @@
 # Data model
 
-IndexedDB through Dexie. The schema is in `src/db/schema.ts`, repositories are in `src/db/repositories.ts`.
+IndexedDB through Dexie. The schema is in `frontend/src/db/schema.ts`, repositories are in `frontend/src/db/repositories.ts`.
 
 | Table            | Key                    | Holds                                                           |
 | ---------------- | ---------------------- | --------------------------------------------------------------- |

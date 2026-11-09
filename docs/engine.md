@@ -1,6 +1,6 @@
 # Poker engine
 
-`src/engine` is pure TypeScript with no React or DOM dependency.
+`frontend/src/engine` is pure TypeScript with no React or DOM dependency.
 
 ## Implemented so far
 
@@ -24,7 +24,7 @@ Each variant is a `VariantDefinition`: data plus hooks. The engine and UI do not
 | `rankHand`       | Ranks 5 cards                              | Short deck's flush-over-full-house |
 | `awardPot`       | Splits a pot among contenders              | Hi-lo split                        |
 
-To add a variant: write a definition in `src/engine/variants/`, add it to the registry, and add a course.
+To add a variant: write a definition in `frontend/src/engine/variants/`, add it to the registry, and add a course.
 
 **Known limit:** the model covers community-card games. Stud (per-player up cards) and draw (card exchange) would need extra street types.
 

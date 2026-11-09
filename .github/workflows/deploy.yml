@@ -1,0 +1,66 @@
+name: Deploy
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      KUBECONFIG_B64: ${{ secrets.KUBECONFIG_B64 }}
+      GHCR_PULL_TOKEN: ${{ secrets.PROD_GHCR_PULL_TOKEN || secrets.GHCR_PULL_TOKEN }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.18.3
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "26"
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: |
+          pnpm --dir frontend install --frozen-lockfile
+          pnpm --dir frontend exec playwright install --with-deps chromium
+
+      - name: Verify
+        run: |
+          pnpm --dir frontend lint
+          pnpm --dir frontend typecheck
+          pnpm --dir frontend test
+          pnpm --dir frontend test:e2e
+
+      - name: Check deploy secrets
+        id: secrets
+        run: |
+          if [[ -z "$KUBECONFIG_B64" || -z "$GHCR_PULL_TOKEN" ]]; then
+            echo "::notice::Deploy skipped: set KUBECONFIG_B64 and GHCR_PULL_TOKEN to enable it."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Deploy
+        if: steps.secrets.outputs.ready == 'true'
+        env:
+          CONTAINER_CLI: docker
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          export KUBECONFIG="$RUNNER_TEMP/kubeconfig"
+          printf '%s' "$KUBECONFIG_B64" | base64 -d > "$KUBECONFIG"
+          bash scripts/deploy/deploy-vps-local.sh

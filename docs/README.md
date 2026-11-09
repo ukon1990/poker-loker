@@ -11,10 +11,12 @@ This folder is the living plan for the app. It is updated in every phase of the 
 | [curriculum.md](curriculum.md)     | Course structure, exercise types, gamification |
 | [data-model.md](data-model.md)     | Dexie tables, migrations, backup               |
 | [design.md](design.md)             | Visual design, finalized after approval        |
-| [deployment.md](deployment.md)     | Hosting on S3 and PWA requirements             |
+| [deployment.md](deployment.md)     | Hosting on Kubernetes and PWA requirements             |
 | [decisions.md](decisions.md)       | Log of decisions and why they were made        |
 
 ## Commands
+
+Run these from the repository root.
 
 | Command                                            | Purpose                                                             |
 | -------------------------------------------------- | ------------------------------------------------------------------- |
@@ -24,5 +26,4 @@ This folder is the living plan for the app. It is updated in every phase of the 
 | `pnpm test`                                        | Unit tests                                                          |
 | `pnpm test:e2e`                                    | Playwright against the production build                             |
 | `pnpm build`                                       | Production build into `dist/`                                       |
-| `DEPLOY_TARGET=user@host:/path pnpm deploy:server` | Upload the build to an Apache or nginx server                       |
-| `S3_BUCKET=name pnpm deploy:s3`                    | Upload the build to S3                                              |
+| `pnpm run deploy` | Build, push, and roll out to Kubernetes. See [infra/README.md](../infra/README.md) |

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><title>Poker Loker</title><rect width="512" height="512" rx="112" fill="#0e5b49"/><g transform="translate(10.240000000000009 10.240000000000009) scale(0.96)">
+    <g transform="translate(296 256) rotate(13)">
+      <rect x="-118" y="-164" width="236" height="328" rx="24" fill="#0a4638" transform="translate(5 9)"/>
+      <rect x="-118" y="-164" width="236" height="328" rx="24" fill="#c4122f"/>
+      <rect x="-98" y="-144" width="196" height="288" rx="12" fill="none" stroke="#fafaf7" stroke-opacity=".55" stroke-width="5"/>
+    </g>
+    <g transform="translate(222 256) rotate(-8)">
+      <rect x="-118" y="-164" width="236" height="328" rx="24" fill="#0a4638" fill-opacity=".55" transform="translate(5 9)"/>
+      <rect x="-118" y="-164" width="236" height="328" rx="24" fill="#fafaf7"/>
+      <path fill="#15171a" d="M256 96c34 56 132 104 132 186 0 46-36 76-74 76-20 0-37-7-48-20 3 32 16 58 44 78H202c28-20 41-46 44-78-11 13-28 20-48 20-38 0-74-30-74-76 0-82 98-130 132-186z" transform="translate(-118 -117) scale(.46)"/>
+      
+    </g></g></svg>

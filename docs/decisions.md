@@ -6,6 +6,8 @@ Newest first.
 
 | Decision                                           | Why                                                                                         |
 | -------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| One nginx container on Kubernetes, not S3         | Matches the other apps on the VPS cluster, and the server config ships with the app |
+| Repository split into docs, infra, scripts, frontend | Leaves room for a backend later |
 | Clean paths, not hash URLs                         | Nicer, shareable links. The cost is that the host must serve `index.html` for unknown paths |
 | Plain TanStack Router, not TanStack Start          | No SSR is wanted, and Start adds server concepts the app does not need                      |
 | TanStack Query over Dexie, not `dexie-react-hooks` | Keeps to the TanStack stack and works with router loaders                                   |
@@ -27,3 +29,5 @@ Newest first.
 | Auto difficulty is the default                     | A beginner should never have to guess which level suits them                                |
 | Lesson submit button says Confirm, not Check       | In poker, Check is also an action, and the two appeared side by side                        |
 | Coached decisions do not count toward skill        | Following the coach's advice says little about the player's own judgment                    |
+| Launch screen is felt in both themes               | A manifest has one splash colour, and paper would flash white in dark mode                  |
+| iOS status bar style is `default`                  | `black-translucent` draws white text, which cannot be read on the paper background          |

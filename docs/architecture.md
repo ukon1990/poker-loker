@@ -20,7 +20,12 @@
 ## Layout
 
 ```
-src/
+docs/          This plan
+infra/         Kubernetes manifests and deployment notes
+scripts/       Deploy scripts
+frontend/      The app, with its own package.json
+  nginx.conf   Server config for the container
+frontend/src/
   engine/       Pure TypeScript: no React, no DOM, deterministic
     core/       Cards, deck, seeded RNG, combinations
     eval/       Hand ranking
@@ -46,8 +51,8 @@ src/
 Dexie is the source of truth for everything that persists.
 
 - **Reads:** a route loader calls `queryClient.ensureQueryData(...)`, and the component reads with `useSuspenseQuery`.
-- **Writes:** a mutation calls a repository function in `src/db`, then invalidates the matching query.
-- **Query defaults** are set in `src/db/query-client.ts`. `networkMode: 'always'` is essential, because Query's default pauses when the device is offline, and this app has no network dependency. `staleTime: Infinity` is correct because Dexie changes only through our own mutations.
+- **Writes:** a mutation calls a repository function in `frontend/src/db`, then invalidates the matching query.
+- **Query defaults** are set in `frontend/src/db/query-client.ts`. `networkMode: 'always'` is essential, because Query's default pauses when the device is offline, and this app has no network dependency. `staleTime: Infinity` is correct because Dexie changes only through our own mutations.
 
 The live hand being played is held in TanStack Store for fast updates, and is saved to Dexie (debounced) so it can resume after a reload.
 

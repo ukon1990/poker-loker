@@ -13,7 +13,7 @@ Someone who does not yet know poker. The course starts from what the cards and h
 ## Hard constraints
 
 - Runs entirely in the browser. No backend, no accounts, no SSR.
-- Deployable as static files, for example to an S3 bucket.
+- Deployable as static files, served by one small container on Kubernetes.
 - Installable PWA that works offline.
 - All progress lives on the device, in IndexedDB through Dexie, with export/import as a safeguard.
 - Texas Hold'em first, without assumptions that block other variants later.

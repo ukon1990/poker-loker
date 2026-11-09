@@ -8,7 +8,7 @@ Each lesson is a playing card you collect. A unit is a suit, finished lessons ar
 
 ## Colour
 
-Tokens live in `src/styles.css`. Playing cards keep their paper colours in dark mode, like real cards.
+Tokens live in `frontend/src/styles.css`. Playing cards keep their paper colours in dark mode, like real cards.
 
 | Token     | Role                          | Light     | Dark      |
 | --------- | ----------------------------- | --------- | --------- |
@@ -35,13 +35,20 @@ Both fonts are bundled with the app so they work offline.
 | Labels                            | Figtree 600, 13  |
 | A poker word you can tap          | Dotted underline |
 
-## Components (`src/ui`)
+## Components (`frontend/src/ui`)
 
 - **PlayingCard:** sizes `xxs`, `xs`, `sm`, `md`, `lg`, with face-down `felt` and `quiet` backs, an optional ring, and a slight tilt.
 - **Chip:** `red`, `felt`, `ink`, and `paper` tones.
 - **Buttons:** primary (ink), outline, felt, red, and disabled. At least 44 px tall.
 - **Feedback:** tinted panels that always pair colour with an icon and words.
 - **Sheet:** bottom sheet for term definitions.
+
+## Logo and launch
+
+The logo is two fanned cards on felt: a red card behind, and a paper card in front with a spade and the corner indices P and L. `frontend/scripts/generate-icons.ts` draws it and renders every icon and launch image into `frontend/public`. Run it from `frontend/` after changing the logo. To support a new iPhone size, add it to the script and paste the tags it prints into `index.html`.
+
+- **Icons:** rounded for browsers and desktops, maskable with its art inside the safe zone for Android, and a full square for iOS, which rounds the corners itself.
+- **Launch:** the same felt screen in light and dark. iPhones show a startup image, Android builds its splash from the manifest, and `index.html` shows the logo until the first screen is ready.
 
 ## Layout
 

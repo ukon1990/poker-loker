@@ -2,7 +2,7 @@
 
 ## Structure
 
-Course (one per variant) → Unit → Lesson → Exercises, stored as typed data in `src/curriculum`.
+Course (one per variant) → Unit → Lesson → Exercises, stored as typed data in `frontend/src/curriculum`.
 
 ## Hold'em course
 
@@ -34,7 +34,7 @@ Looking up a term at the table adds it to review, because needing to look it up 
 - A lesson may only use a term that has been introduced by that point, or that it links to the glossary.
 - A curriculum test enforces both rules: every marked term must exist in the glossary, and must be introduced no later than its first use.
 
-**Data shape** (`src/curriculum/glossary/`)
+**Data shape** (`frontend/src/curriculum/glossary/`)
 
 ```ts
 interface GlossaryTerm {

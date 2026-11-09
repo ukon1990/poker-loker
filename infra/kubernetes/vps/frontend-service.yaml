@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: pokerloker-frontend
+  namespace: pokerloker
+  labels:
+    app: pokerloker-frontend
+spec:
+  type: ClusterIP
+  selector:
+    app: pokerloker-frontend
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080

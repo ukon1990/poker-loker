@@ -11,7 +11,7 @@ Status: ✅ done · 🚧 in progress · ⏳ waiting · ⬜ not started
 | 5   | Lesson player, exercises, glossary, units 1–3, XP, streaks, path      | ✅     |
 | 6   | Simulation table: setup, play, resume, coach, hand history            | ✅     |
 | 7   | Review sessions, progress screen, Hold'em units 4–8                   | ✅     |
-| 8   | Final icons, PWA polish, deployment guide, optional deploy            | ⬜     |
+| 8   | Final icons, PWA polish, deployment guide, optional deploy            | ✅     |
 
 The design was approved on 2026-11-08.
 
